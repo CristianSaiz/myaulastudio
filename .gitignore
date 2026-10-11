@@ -1,0 +1,17 @@
+# Archivos de entorno y credenciales
+.env
+.env.*
+*.local
+
+# Basura del sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Configuraciones de editores
+.vscode/
+.idea/
+
+# Logs y temporales
+*.log
+npm-debug.log*

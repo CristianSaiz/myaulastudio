@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyAulaStudio · Suite Docente Multiasignatura</title>
+  
+  <!-- Tailwind CSS para utilidades base -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  
+  <!-- KaTeX para renderizado de fórmulas LaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  
+  <!-- Marked.js para parsear Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  
+  <!-- html2pdf.js para exportación auxiliar -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Hojas de estilos modulares -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/print.css" media="print">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Cabecera -->
+  <header class="bg-indigo-600 text-white p-4 shadow-md shrink-0">
+    <div class="max-w-5xl mx-auto flex justify-between items-center">
+      <h1 class="text-xl font-bold flex items-center gap-2">
+        <span>🎓</span> MyAulaStudio
+      </h1>
+      <span class="text-xs bg-indigo-500/30 border border-indigo-400/40 px-2.5 py-0.5 rounded-full text-indigo-100 font-medium tracking-wide">
+        Suite Docente Multiasignatura
+      </span>
+    </div>
+  </header>
+
+  <!-- Panel Principal -->
+  <main class="max-w-[1440px] mx-auto p-4 flex-1 w-full grid grid-cols-1 gap-6 items-start lg:grid-cols-12">
+
+    <!-- Columna Izquierda: Formulario Configuración -->
+    <section class="lg:col-span-4 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-5 lg:self-start">
+
+      <!-- ================================================================ -->
+      <!-- BLOQUE 1: DATOS DE LA PORTADA                                    -->
+      <!-- ================================================================ -->
+      <div class="space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <span>🏫</span> 1. Datos de la Portada
+          </h2>
+          <label class="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer font-medium">
+            <input type="checkbox" id="includeCover" checked class="rounded text-indigo-600 focus:ring-indigo-500">
+            <span>Incluir portada</span>
+          </label>
+        </div>
+
+        <div class="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2.5">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="block text-slate-500 mb-0.5">Nombre del centro</label>
+              <input type="text" id="academyName" placeholder="Mates, Amor y Magia" class="w-full border border-slate-300 rounded p-1.5 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-indigo-500">
+            </div>
+            <div>
+              <label class="block text-slate-500 mb-0.5">Lema / Subtítulo</label>
+              <input type="text" id="academySlogan" placeholder="Donde las matemáticas cobran sentido" class="w-full border border-slate-300 rounded p-1.5 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-slate-500 text-xs mb-0.5">Curso / Colección habitual</label>
+            <input type="text" id="academyCourse" placeholder="2º Bachillerato · Ciencias" class="w-full border border-slate-300 rounded p-1.5 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-indigo-500">
+          </div>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- BLOQUE 2: CONFIGURACIÓN PEDAGÓGICA                               -->
+      <!-- ================================================================ -->
+      <div class="space-y-3 border-t border-slate-100 pt-3">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <span>⚙️</span> 2. Configuración Pedagógica
+        </h2>
+
+        <!-- Selector de Asignatura -->
+        <div>
+          <label class="block text-xs font-medium text-slate-600 mb-1">Asignatura</label>
+          <select id="subject" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 text-xs">
+            <option value="math">Matemáticas</option>
+            <option value="math">Física/Química</option>
+            <option value="spanish">Lengua Castellana y Literatura</option>
+            <option value="english">Inglés</option>
+          </select>
+        </div>
+
+        <!-- Selector de Motor / Modo de Análisis -->
+        <div>
+          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+            Modo de Resolución
+          </label>
+          <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg border border-slate-200">
+            <label class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600">
+              <input type="radio" name="engineMode" value="flash" class="sr-only" checked>
+              <span>⚡ Rápido (Flash)</span>
+            </label>
+            <label class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600">
+              <input type="radio" name="engineMode" value="pro" class="sr-only">
+              <span>🧠 Profundo (Pro)</span>
+            </label>
+          </div>
+          <p id="modeHelperText" class="text-[11px] text-slate-400 mt-1 leading-tight">
+            Resolución instantánea (~3 s). Ideal para ESO, Bachillerato y Selectividad.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- BLOQUE 3: ENUNCIADO Y MATERIAL DE ESTUDIO                        -->
+      <!-- ================================================================ -->
+      <div class="space-y-3 border-t border-slate-100 pt-3 flex-1 flex flex-col">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          <span>📝</span> 3. Enunciado del Problema
+        </h2>
+
+        <!-- Entrada de Texto -->
+        <div class="flex-1 flex flex-col">
+          <label class="block text-xs font-medium text-slate-600 mb-1">Enunciado o transcripción</label>
+          <textarea id="problemInput" placeholder="Pega aquí el problema o déjalo vacío si subes una foto..." class="w-full border border-slate-300 rounded-lg p-2.5 flex-1 min-h-[90px] focus:ring-2 focus:ring-indigo-500 text-xs"></textarea>
+        </div>
+
+        <!-- Subida de Archivos Multi-modal -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-medium text-slate-700">Archivos adjuntos (fotos o PDF)</label>
+            <span id="fileCountBadge" class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">0 / 7</span>
+          </div>
+          
+          <input type="file" id="imageInput" multiple accept="image/*,application/pdf" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-2.5 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer border border-slate-300 rounded-lg p-1 bg-white">
+          
+          <!-- Lista visual de archivos acumulados -->
+          <div id="imagePreviewContainer" class="hidden mt-2 flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Botón de Resolución -->
+        <button id="resolveBtn" disabled class="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white text-sm font-medium py-2.5 rounded-lg transition-colors shadow-sm mt-2">
+          Resolver Ejercicio
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Columna Derecha: Previsualización y Ficha PDF -->
+    <section class="lg:col-span-8 bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-0 h-[75vh] lg:h-[calc(100dvh-6rem)] lg:sticky lg:top-4 lg:overflow-hidden">
+      <div class="flex justify-between items-center mb-4 shrink-0">
+        <h2 class="text-lg font-semibold text-slate-700">4. Solución y Ficha PDF</h2>
+        <div class="flex gap-2">
+          <button 
+            id="downloadStudentPdfBtn"
+            type="button" 
+            class="hidden bg-slate-700 hover:bg-slate-800 text-white text-xs sm:text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+            🎒 PDF Alumno
+          </button>
+
+          <button 
+            id="downloadTeacherPdfBtn"
+            type="button" 
+            class="hidden bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-medium px-3 py-1.5 rounded-lg transition-colors">
+            👨‍🏫 PDF Profesor
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor con SCROLL VERTICAL interno garantizado -->
+      <div id="solutionContainer" class="border border-slate-100 rounded-lg p-6 bg-slate-50 flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain text-sm leading-relaxed prose max-w-none shadow-inner">
+        <p class="text-slate-400 italic text-center mt-12">La solución paso a paso aparecerá aquí...</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Módulos JavaScript en orden de dependencia -->
+  <script src="js/config.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/prompts.js"></script>
+  <script src="js/katex-render.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/pdf-export.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

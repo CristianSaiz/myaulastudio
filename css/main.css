@@ -1,0 +1,196 @@
+/* ==========================================================================
+   Variables de Diseño Editorial
+   ========================================================================== */
+:root {
+  --night: #121e37;
+  --night-deep: #0b1429;
+  --gold: #dcb478;
+  --gold-light: #f4ddad;
+  --paper: #fffefa;
+  --muted: #66738c;
+  --line: #dbe0e9;
+
+  /* Paleta de la portada */
+  --cover-cream: #fffaf0;
+  --cover-ice: #c8d3e9;
+  --cover-note: #aebdd6;
+}
+
+/* ==========================================================================
+   Contenedor del Visor y Eliminación de Scroll Horizontal
+   ========================================================================== */
+#solutionContainer {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  min-height: 0;               /* permite que el flex-item se encoja por debajo de su contenido */
+  overscroll-behavior: contain; /* el scroll no "se escapa" a la página al llegar al final */
+}
+
+/* Contenedor del documento resuelto */
+.contenido-documento {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Si una fórmula LaTeX o tabla es ancha, el scroll se queda dentro de ella
+   sin desbordar ni ensanchar el visor general */
+.katex-display {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 4px 0;
+}
+
+.contenido-documento table,
+.contenido-documento pre {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+}
+
+/* ==========================================================================
+   Portada Editorial (Pantalla e Impresión)
+   ========================================================================== */
+.portada {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 100% !important;
+  min-height: 520px;
+  background-color: var(--night);
+  color: #fbf5e8;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.portada::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(220, 180, 120, 0.4);
+  pointer-events: none;
+}
+
+.portada .cover-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 2;
+}
+
+.portada .cover-brand {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  color: #f9eacf;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+}
+
+.portada .cover-slogan-top {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #d7b781;
+}
+
+.portada .cover-main {
+  margin-top: auto;
+  margin-bottom: auto;
+  padding-top: 40px;
+  padding-bottom: 40px;
+  z-index: 2;
+}
+
+.portada .cover-kicker {
+  font-size: 10px;
+  color: var(--gold-light);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+
+/* Blindaje de color frente a posibles estilos heredados de Tailwind */
+.portada h1.cover-title {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 34px;
+  color: var(--cover-cream) !important;
+  line-height: 1.15;
+  margin: 0 0 12px 0;
+}
+
+.portada .cover-subtitle {
+  font-size: 14px;
+  color: var(--cover-ice);
+  margin: 0 0 18px 0;
+  line-height: 1.4;
+}
+
+.portada .cover-tag {
+  display: inline-block;
+  border: 1px solid rgba(224, 186, 123, 0.6);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #f7dfb1;
+}
+
+.portada .cover-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid #3d4a63;
+  padding-top: 16px;
+  margin-top: auto;
+  z-index: 2;
+}
+
+.portada .cover-bottom em {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-size: 13px;
+  color: #d8b67c;
+}
+
+.portada .cover-note {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--cover-note);
+}
+
+/* Distintivos dinámicos de portada (Pantalla / Profesor por defecto) */
+.cover-kicker-alumno,
+.cover-title-alumno,
+.tag-alumno
+.tag-profesor {
+  display: none !important;
+}
+
+.tag-profesor {
+  background-color: rgba(220, 180, 120, 0.2);
+  border-color: #dcb478 !important;
+  color: #f4ddad !important;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   Vista Previa en Pantalla: Ocultar distintivos de impresión
+   ========================================================================== */
+.portada .cover-tag-badge,
+.portada .tag-profesor,
+.portada .tag-alumno,
+.portada .cover-kicker-alumno,
+.portada .cover-title-alumno {
+  display: none !important;
+}

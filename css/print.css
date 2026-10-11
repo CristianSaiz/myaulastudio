@@ -1,0 +1,210 @@
+/* ==========================================================================
+   Impresión / PDF · A4 · Chromium (Chrome, Brave, Edge)
+   Se carga con media="print" DESPUÉS de main.css, que también aplica en
+   impresión: aquí solo van las diferencias respecto a la pantalla.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Páginas
+   -------------------------------------------------------------------------- */
+
+/* Contenido: márgenes reales en CADA página.
+   (Con margin: 0 global, el padding superior/inferior de un contenedor solo
+   se aplica en su primer/último fragmento, y las páginas 3+ quedarían
+   pegadas al borde del papel.) */
+@page {
+  size: A4 portrait;
+  margin: 25mm 20mm;
+}
+
+/* Portada: página con nombre y sangrado total. Al cambiar de nombre de
+   página, Chromium fuerza el salto automáticamente. */
+@page cover {
+  size: A4 portrait;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   2. Fidelidad de color (fondos incluidos, aunque el diálogo tenga
+      desmarcado "Gráficos de fondo")
+   -------------------------------------------------------------------------- */
+html, body, *, *::before, *::after {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Layout del documento
+   Tailwind pone en <body> min-h-screen + flex: se anula para que no haya
+   unidades de viewport (100vh) ni contenedores flex rompiendo la paginación.
+   -------------------------------------------------------------------------- */
+html, body {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #fff !important;
+}
+
+/* Interfaz de la app oculta.
+   IMPORTANTE: selectores acotados con `body >` / `main >`. Un selector suelto
+   como `section:last-of-type` también casa con <section class="portada"> y,
+   con mayor especificidad, anula sus reglas aunque sean !important. */
+body > header,
+main > section:first-child,
+main > section:last-child > div:first-child,
+#downloadStudentPdfBtn,
+#downloadTeacherPdfBtn,
+button {
+  display: none !important;
+}
+
+/* Contenedores de la app: se aplanan a bloque de ancho completo. */
+main,
+main > section:last-child,
+#solutionContainer {
+  display: block !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Portada · página 1 · full bleed
+   -------------------------------------------------------------------------- */
+.portada {
+  page: cover;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;              /* = ancho real de la hoja, sin redondeos mm→px */
+  height: 296.8mm;          /* 0,2 mm menos que A4: Chromium redondea la hoja a px
+                               enteros y 297mm puede desbordar y crear una
+                               página en blanco */
+  min-height: 0;
+  margin: 0;
+  padding: 40mm 25mm 25mm;
+  border-radius: 0;
+  background-color: #121e37 !important;
+  overflow: hidden;
+  break-after: page;
+  page-break-after: always;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.portada::before {
+  inset: 12mm;
+  border-color: rgba(220, 180, 120, 0.5);
+}
+
+.portada h1.cover-title {
+  font-size: 42px;
+}
+
+/* --------------------------------------------------------------------------
+   5. Contenido · página 2 en adelante
+   Los márgenes los pone @page; el contenedor no añade padding propio.
+   -------------------------------------------------------------------------- */
+.contenido-documento {
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: #fff;
+}
+
+/* Utilidad opcional para forzar salto manual entre ejercicios */
+.page-break {
+  display: block;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  break-before: page;
+  page-break-before: always;
+}
+
+/* --------------------------------------------------------------------------
+   6. Control de cortes
+   -------------------------------------------------------------------------- */
+
+/* Bloques que no deben partirse */
+.katex-display,
+pre,
+blockquote,
+table,
+figure,
+img,
+tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Un título nunca debe quedar huérfano al final de página
+   (break-inside en un título no hace nada: es una sola línea) */
+#solutionContainer :is(h1, h2, h3, h4) {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
+/* Texto corrido: mínimo 3 líneas a cada lado de un corte */
+#solutionContainer :is(p, li) {
+  orphans: 3;
+  widows: 3;
+}
+
+/* Elementos de lista cortos no se parten; las tablas largas repiten cabecera */
+#solutionContainer li {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+thead {
+  display: table-header-group;
+}
+
+/* ==========================================================================
+   7. Distintivos de Impresión Dual (Profesor vs. Alumno)
+   ========================================================================== */
+
+/* 1. PDF Profesor (por defecto en impresión): mostrar etiqueta dorada */
+.portada .tag-profesor {
+  display: inline-block !important;
+  background-color: rgba(220, 180, 120, 0.2) !important;
+  border-color: #dcb478 !important;
+  color: #f4ddad !important;
+  font-weight: 600;
+}
+
+/* 2. PDF Alumno: ocultar soluciones y alternar etiquetas */
+body.mode-student-print .bloque-soluciones,
+body.mode-student-print .page-break-soluciones {
+  display: none !important;
+}
+
+body.mode-student-print .portada .cover-kicker-profesor,
+body.mode-student-print .portada .cover-title-profesor,
+body.mode-student-print .portada .tag-profesor {
+  display: none !important;
+}
+
+body.mode-student-print .portada .cover-kicker-alumno,
+body.mode-student-print .portada .cover-title-alumno {
+  display: block !important;
+}
+
+body.mode-student-print .portada .tag-alumno {
+  display: inline-block !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #fffaf0 !important;
+}
