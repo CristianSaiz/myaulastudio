@@ -55,11 +55,33 @@ ESTRUCTURA OBLIGATORIA:
 3. ### Vocabulario y Expresiones Clave`
 };
 
+// Directrices pedagógicas según el ciclo formativo
+const LEVEL_INSTRUCTIONS = {
+  primaria: `NIVEL: Educación Primaria (6-12 años).
+- Explica de forma intuitiva, visual y con pasos muy desglosados.
+- NO uses incógnitas abstractas (x, y) ni álgebra formal para problemas de reparto o lógica a menos que sea elemental.
+- Acompaña las operaciones de explicaciones paso a paso en lenguaje cercano y motivador.`,
+
+  eso: `NIVEL: Educación Secundaria Obligatoria (ESO).
+- Aplica métodos estándar de secundaria (resolución algebraica ordenada, sustitución numérica y comprobación).
+- Evita herramientas avanzadas de bachillerato (nada de derivadas para optimizar ni matrices para resolver sistemas).`,
+
+  bachillerato: `NIVEL: Bachillerato y Acceso a la Universidad (EBAU / Selectividad).
+- Rigor formal estricto alineado con los criterios de corrección de tribunales de Selectividad.
+- Justifica hipótesis previas (continuidad, derivabilidad, leyes físicas o sintaxis RAE completa).
+- Fórmulas en LaTeX estricto y enmarca el resultado final.`,
+
+  universidad: `NIVEL: Universidad / Grado Superior.
+- Máximo rigor analítico y notación matemática formal.
+- Desarrolla demostraciones, justificaciones teóricas y métodos de cálculo multivariable, álgebra lineal o física aplicada según corresponda.`
+};
+
 /**
- * Devuelve el prompt del sistema correspondiente a la asignatura indicada.
- * @param {string} subject - Clave de la asignatura ('math', 'spanish', 'english').
- * @returns {string} El prompt del sistema configurado.
+ * Devuelve el prompt del sistema combinando asignatura y nivel formativo.
  */
-function getSystemPrompt(subject) {
-  return SYSTEM_PROMPTS[subject] || SYSTEM_PROMPTS.math;
+function getSystemPrompt(subject, level = 'bachillerato') {
+  const basePrompt = SYSTEM_PROMPTS[subject] || SYSTEM_PROMPTS.math;
+  const levelRule = LEVEL_INSTRUCTIONS[level] || LEVEL_INSTRUCTIONS.bachillerato;
+  
+  return `${basePrompt}\n\nDIRECTRIZ DE NIVEL EDUCATIVO:\n${levelRule}`;
 }

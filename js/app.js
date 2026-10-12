@@ -27,6 +27,15 @@ const academySloganInput = document.getElementById('academySlogan');
 const academyCourseInput = document.getElementById('academyCourse');
 const includeCoverCheckbox = document.getElementById('includeCover');
 
+const educationLevelSelect = document.getElementById('educationLevel');
+
+const LEVEL_COURSE_SUGGESTIONS = {
+  primaria: 'Educación Primaria',
+  eso: 'Secundaria (ESO)',
+  bachillerato: '2º Bachillerato · Ciencias',
+  universidad: 'Grado Universitario'
+};
+
 // --------------------------------------------------------------------------
 // 2. ESTADO LOCAL
 // --------------------------------------------------------------------------
@@ -230,6 +239,18 @@ if (subjectSelect) {
   });
 }
 
+// Reacción al cambiar el nivel educativo (auto-rellena la portada pero deja editarlo libremente)
+if (educationLevelSelect && academyCourseInput) {
+  educationLevelSelect.addEventListener('change', (e) => {
+    const suggested = LEVEL_COURSE_SUGGESTIONS[e.target.value];
+    if (suggested) {
+      academyCourseInput.value = suggested;
+      saveAcademyPreferences();
+      renderCurrentView();
+    }
+  });
+}
+
 // Validación reactiva del campo de enunciado
 if (problemInput) {
   ['input', 'change', 'keyup', 'paste'].forEach(evt => {
@@ -343,7 +364,8 @@ if (resolveBtn) {
     `;
 
     try {
-      const systemPrompt = getSystemPrompt(subject);
+      const level = educationLevelSelect ? educationLevelSelect.value : 'bachillerato';
+      const systemPrompt = getSystemPrompt(subject, level);
 
       // Petición a la API (o Mock)
       const rawMarkdown = await ApiClient.resolveExercise({
