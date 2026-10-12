@@ -15,3 +15,17 @@ desktop.ini
 # Logs y temporales
 *.log
 npm-debug.log*
+
+# Archivo de exportación para el cuaderno (evitar duplicar el repo)
+proyecto_completo.md
+*.tmp
+
+# Vercel
+.vercel/
+
+# Python (si usas scripts auxiliares de terminal)
+__pycache__/
+*.pyc
+venv/
+.venv/
+exportar.py

@@ -9,7 +9,7 @@ const APP_CONFIG = {
   // true  -> No llama a la API externa. Devuelve datos simulados al instante
   //          para ajustar maquetación, KaTeX y la portada sin consumir cuota.
   // false -> Realiza la llamada HTTP real hacia Gemini o el proveedor elegido.
-  MOCK_MODE: false,
+  MOCK_MODE: true,
 
   // Endpoint de tu proxy seguro en Cloudflare Workers
   WORKER_URL: 'https://resolutor-edtech-api.c-saiz-montes.workers.dev',

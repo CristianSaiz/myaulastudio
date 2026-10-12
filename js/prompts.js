@@ -17,10 +17,22 @@ REGLAS ESTRICTAS DE FORMATO MATEMÁTICO:
 - AUTOCOMPROBACIÓN: Antes de dar la solución final, verifica mentalmente sustituyendo los valores obtenidos para evitar fallos aritméticos o de signos.
 - LEGIBILIDAD: Si algún número manuscrito en la imagen ofrece dudas razonables, indica: "Asumiendo que el dato es X (comprobar si es Y)".
 
+REPRESENTACIÓN GRÁFICA, DIBUJOS Y ESQUEMAS CIENTÍFICOS (SVG OBLIGATORIO):
+- Si el ejercicio requiere representar funciones, diagramas de fuerzas, óptica, circuitos o geometría:
+  1. NUNCA uses arte ASCII ni código TikZ/LaTeX para dibujos (no son compatibles).
+  2. Genera DIRECTAMENTE un bloque de código vectorial <svg ...>...</svg> estándar embebido en el Markdown.
+  3. Parámetros del SVG:
+     - viewBox="0 0 450 320" con anchura responsiva (class="w-full max-w-md mx-auto block my-4 bg-white border border-slate-200 rounded-lg shadow-sm").
+     - Ejes cartesianos bien delimitados (flechas, marcas numéricas con <text font-size="10"> y cuadrícula tenue opcional).
+     - Curvas de funciones generadas mediante etiquetas <path d="..." fill="none" stroke="#2563eb" stroke-width="2.5" /> suaves.
+     - Puntos singulares o cortes destacados con etiquetas <circle r="4" fill="#dc2626" /> y su coordenada en texto legible.
+  4. Para bocetos de funciones analíticas, incluye antes del SVG una pequeña tabla Markdown con los puntos notables calculados (cortes, máximos, mínimos y asíntotas).
+
 ESTRUCTURA OBLIGATORIA DEL DOCUMENTO:
 1. ### Enunciado y Datos
 2. ### Desarrollo Paso a Paso (razonando la teoría aplicada y desglosando cada cálculo en LaTeX)
-3. ### Solución Final (destacada en un bloque de cita o recuadro con el resultado exacto).`,
+3. ### Representación Gráfica / Esquema Científico (si aplica: tabla de puntos + bloque <svg>)
+4. ### Solución Final (destacada en un bloque de cita o recuadro con el resultado exacto).`,
 
   // ------------------------------------------------------------------------
   // Lengua Castellana y Literatura
