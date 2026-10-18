@@ -21,6 +21,17 @@ const APP_CONFIG = {
   // Límite máximo de archivos adjuntos simultáneos
   MAX_FILES: 7,
 
+  // Configuración del periodo de prueba (Trial)
+  TRIAL_MAX_DAYS: 7,
+  TRIAL_MAX_USAGE: 15,
+  DEMO_LICENSE_KEY: 'DEMO-TRIAL-7D',
+
+  // Orígenes permitidos para el Worker
+  ALLOWED_ORIGIN: ['https://myaulastudio.vercel.app', 'http://localhost:5500'],
+
+  // Clave de licencia guardada en localStorage
+  STORAGE_LICENSE_KEY: 'edtech_license_key',
+
   // Mapeo de identificadores de modelos según el modo seleccionado
   MODELS: {
     gemini: {
@@ -43,6 +54,9 @@ const APP_CONFIG = {
 
   // Claves fijas utilizadas en localStorage
   STORAGE_KEYS: {
+    licenseKey: 'edtech_license_key',
+    trialStartDate: 'edtech_trial_start',
+    trialUsageCount: 'edtech_trial_usage',
     apiKeyPrefix: 'myaulastudio_key_',
     academyName: 'myaulastudio_academy_name',
     academySlogan: 'myaulastudio_academy_slogan',

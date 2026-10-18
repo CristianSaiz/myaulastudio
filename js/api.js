@@ -75,9 +75,18 @@ const ApiClient = {
         });
       } else {
         // --- RUTA B: PROXY SEGURO EN CLOUDFLARE WORKER (Clave centralizada en backend) ---
+        const licenseKey = localStorage.getItem(APP_CONFIG.STORAGE_LICENSE_KEY);
+        
+        if (!licenseKey) {
+          throw new Error('No se ha configurado una clave de licencia válida.');
+        }
+
         response = await fetch(APP_CONFIG.WORKER_URL, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-license-key': licenseKey
+          },
           body: JSON.stringify({
             model: modelId,
             geminiData: geminiData
@@ -86,6 +95,9 @@ const ApiClient = {
       }
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error('Licencia no válida o caducada. Por favor, revisa tu clave de acceso.');
+        }
         const errorText = await response.text();
         throw new Error(`Error en la llamada a Gemini (${response.status}): ${errorText}`);
       }

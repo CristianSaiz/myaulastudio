@@ -12,6 +12,14 @@ const solutionContainer = document.getElementById('solutionContainer');
 const downloadStudentPdfBtn = document.getElementById('downloadStudentPdfBtn');
 const downloadTeacherPdfBtn = document.getElementById('downloadTeacherPdfBtn');
 
+// Selectores del Modal de Licencia y Trial
+const licenseModal = document.getElementById('licenseModal');
+const licenseInput = document.getElementById('licenseInput');
+const activateLicenseBtn = document.getElementById('activateLicenseBtn');
+const startTrialBtn = document.getElementById('startTrialBtn');
+const licenseError = document.getElementById('licenseError');
+const licenseBadge = document.getElementById('licenseBadge');
+
 // Modo de resolución (Flash / Pro)
 const modeRadios = document.querySelectorAll('input[name="engineMode"]');
 const modeHelperText = document.getElementById('modeHelperText');
@@ -154,6 +162,68 @@ function saveAcademyPreferences() {
   if (academyNameInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academyName, academyNameInput.value.trim());
   if (academySloganInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academySlogan, academySloganInput.value.trim());
   if (academyCourseInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academyCourse, academyCourseInput.value.trim());
+}
+
+/**
+ * Comprueba el estado de la licencia o periodo de prueba.
+ * @returns {boolean} true si tiene permiso para resolver, false si está bloqueado.
+ */
+function checkLicenseStatus(showAlert = false) {
+  const licenseKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+
+  // Caso 1: No hay clave introducida
+  if (!licenseKey) {
+    if (licenseBadge) licenseBadge.classList.add('hidden');
+    if (licenseModal) licenseModal.classList.remove('hidden');
+    return false;
+  }
+
+  // Caso 2: Es la licencia de prueba (Trial)
+  if (licenseKey === APP_CONFIG.DEMO_LICENSE_KEY) {
+    let startDate = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialStartDate);
+    if (!startDate) {
+      startDate = Date.now().toString();
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialStartDate, startDate);
+    }
+
+    const daysElapsed = Math.floor((Date.now() - parseInt(startDate, 10)) / (1000 * 60 * 60 * 24));
+    const daysLeft = Math.max(0, APP_CONFIG.TRIAL_MAX_DAYS - daysElapsed);
+    const usageCount = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
+    const usageLeft = Math.max(0, APP_CONFIG.TRIAL_MAX_USAGE - usageCount);
+
+    if (daysElapsed >= APP_CONFIG.TRIAL_MAX_DAYS || usageCount >= APP_CONFIG.TRIAL_MAX_USAGE) {
+      if (licenseBadge) {
+        licenseBadge.classList.remove('hidden');
+        licenseBadge.className = 'text-[10px] bg-red-500/80 border border-red-300 px-2 py-1 rounded-md text-white font-semibold cursor-pointer';
+        licenseBadge.textContent = 'Trial Expirado';
+      }
+      if (licenseModal) licenseModal.classList.remove('hidden');
+      if (showAlert) {
+        alert(daysElapsed >= APP_CONFIG.TRIAL_MAX_DAYS 
+          ? 'Tu periodo de prueba de 7 días ha finalizado. Introduce una clave de centro.' 
+          : 'Has alcanzado el límite de 15 resoluciones de prueba. Introduce una clave de centro.');
+      }
+      return false;
+    }
+
+    // Trial activo dentro de límites
+    if (licenseBadge) {
+      licenseBadge.classList.remove('hidden');
+      licenseBadge.className = 'text-[10px] bg-emerald-500/80 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';
+      licenseBadge.textContent = `Prueba: ${usageLeft}/15 usos (${daysLeft}d)`;
+      licenseBadge.title = 'Haz clic para cambiar o introducir clave de centro';
+    }
+    return true;
+  }
+
+  // Caso 3: Licencia de centro completa
+  if (licenseBadge) {
+    licenseBadge.classList.remove('hidden');
+    licenseBadge.className = 'text-[10px] bg-indigo-500/60 hover:bg-indigo-500 border border-indigo-300/40 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';
+    licenseBadge.textContent = '✓ Licencia Activa';
+    licenseBadge.title = 'Haz clic para ver o cambiar la clave';
+  }
+  return true;
 }
 
 // --------------------------------------------------------------------------
@@ -330,11 +400,55 @@ if (downloadTeacherPdfBtn) {
   });
 }
 
+// Abrir modal al pulsar en el badge del header
+if (licenseBadge) {
+  licenseBadge.addEventListener('click', () => {
+    if (licenseModal) licenseModal.classList.remove('hidden');
+    if (licenseInput) {
+      const current = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+      licenseInput.value = current === APP_CONFIG.DEMO_LICENSE_KEY ? '' : (current || '');
+    }
+  });
+}
+
+// Botón Activar Licencia
+if (activateLicenseBtn) {
+  activateLicenseBtn.addEventListener('click', () => {
+    const key = licenseInput ? licenseInput.value.trim() : '';
+    if (!key) {
+      if (licenseError) licenseError.classList.remove('hidden');
+      return;
+    }
+    if (licenseError) licenseError.classList.add('hidden');
+
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, key);
+    if (licenseModal) licenseModal.classList.add('hidden');
+    checkLicenseStatus();
+  });
+}
+
+// Botón Iniciar Prueba de 7 días
+if (startTrialBtn) {
+  startTrialBtn.addEventListener('click', () => {
+    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, APP_CONFIG.DEMO_LICENSE_KEY);
+    if (!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialStartDate)) {
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialStartDate, Date.now().toString());
+    }
+    if (!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount)) {
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, '0');
+    }
+    if (licenseModal) licenseModal.classList.add('hidden');
+    checkLicenseStatus();
+  });
+}
+
 // --------------------------------------------------------------------------
 // 6. FLUJO PRINCIPAL: RESOLVER EJERCICIO
 // --------------------------------------------------------------------------
 if (resolveBtn) {
   resolveBtn.addEventListener('click', async () => {
+    if (!checkLicenseStatus(true)) return;
+
     const subject = subjectSelect ? subjectSelect.value : 'math';
     const problem = problemInput ? problemInput.value.trim() : '';
     const engineMode = document.querySelector('input[name="engineMode"]:checked')?.value || 'flash';
@@ -384,6 +498,18 @@ if (resolveBtn) {
       // Renderizamos la vista combinada
       renderCurrentView();
 
+      // Si está en modo prueba, descontar 1 uso
+      const currentKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+      if (currentKey === APP_CONFIG.DEMO_LICENSE_KEY) {
+        const count = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
+        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, (count + 1).toString());
+        checkLicenseStatus();
+      }
+
+      // Limpieza automática de fotos/PDFs adjuntos tras resolver
+      uploadedFiles = [];
+      updateFileListUI();
+
     } catch (error) {
       console.error('Error al resolver ejercicio:', error);
       solutionContainer.innerHTML = `
@@ -405,6 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadSavedPreferences();
   renderCurrentView();
   updateResolveButtonState();
+  checkLicenseStatus();
 });
 
 // Llamada inmediata de sincronización

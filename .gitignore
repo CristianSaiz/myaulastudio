@@ -17,7 +17,7 @@ desktop.ini
 npm-debug.log*
 
 # Archivo de exportación para el cuaderno (evitar duplicar el repo)
-proyecto_completo.md
+myaulastudio_proyecto_completo.md
 *.tmp
 
 # Vercel
