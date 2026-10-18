@@ -43,9 +43,10 @@ const PdfExporter = {
    * @param {string} [options.academySlogan] - Lema o subtítulo descriptivo
    * @param {string} [options.academyCourse] - Curso o nivel formativo
    * @param {string} [options.subjectName] - Nombre de la materia
+   * @param {string} [options.academyLogo] - Logotipo en Base64 o URL (opcional)
    * @returns {string} Fragmento HTML listo para inyectar
    */
-  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName } = {}) {
+  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName, academyLogo } = {}) {
     if (!includeCover) return '';
 
     const defaults = this.getDefaults();
@@ -56,11 +57,22 @@ const PdfExporter = {
     const curso = esc(academyCourse?.trim() || defaults.academyCourse);
     const materia = esc(subjectName?.trim() || 'Material Docente');
 
+    // Recupera el logo de los parámetros o del almacenamiento local
+    const logoKey = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STORAGE_KEYS?.academyLogo) 
+      ? APP_CONFIG.STORAGE_KEYS.academyLogo 
+      : 'myaulastudio_academy_logo';
+    const logoSrc = academyLogo || (typeof localStorage !== 'undefined' ? localStorage.getItem(logoKey) : '') || '';
+
+    // Si hay logo, renderiza una etiqueta img maquetada; de lo contrario, muestra el icono escolar tradicional
+    const logoMarkup = logoSrc
+      ? `<img src="${logoSrc}" alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,0.95); padding: 4px; display: inline-block; vertical-align: middle;">`
+      : `<span style="font-size: 28px; line-height: 1; display: inline-block; vertical-align: middle;">🏫</span>`;
+
     return [
       '<section class="portada not-prose">',
       '<div class="cover-top">',
-      `<div class="cover-brand">${nombre}</div>`,
-      '<div class="cover-slogan-top">MATERIAL DE ESTUDIO</div>',
+      `  <div class="cover-brand" style="display: flex; align-items: center; gap: 12px;">${logoMarkup}<span>${nombre}</span></div>`,
+      '  <div class="cover-slogan-top">MATERIAL DE ESTUDIO</div>',
       '</div>',
       '<div class="cover-main">',
       '<p class="cover-kicker cover-kicker-profesor">Guía Didáctica · Solucionario Paso a Paso</p>',
@@ -168,7 +180,7 @@ const PdfExporter = {
       return;
     }
 
-    const filename = options.filename || `${this.buildFileName(options.subjectName, options.academyName)}.pdf`;
+    const filename = options.filename || `${this.buildFileName({ subjectName: options.subjectName, academyName: options.academyName })}.pdf`;
 
     const config = {
       margin: 0,

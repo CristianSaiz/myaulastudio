@@ -10,7 +10,7 @@ const MarkdownMathRenderer = {
     delimiters: [
       { left: '$$', right: '$$', display: true },
       { left: '$', right: '$', display: false },
-      { left: '[', right: ']', display: true },
+      { left: '\\[', right: '\\]', display: true },
       { left: '\\(', right: '\\)', display: false }
     ],
     throwOnError: false,
@@ -60,23 +60,28 @@ const MarkdownMathRenderer = {
     let enunciadosMd = rawMarkdown;
     let solucionesMd = '';
 
-    // Separamos el cuaderno de enunciados del bloque de soluciones
+    // 1. Detección por separador explícito de página
     const splitToken = '<div class="page-break"></div>';
     if (rawMarkdown.includes(splitToken)) {
       const parts = rawMarkdown.split(splitToken);
       enunciadosMd = parts[0];
       solucionesMd = parts.slice(1).join(splitToken);
     } else {
-      const matchIndex = rawMarkdown.search(/##\s*(?:✍️\s*)?Ejercicios Resueltos/i);
-      if (matchIndex !== -1) {
-        enunciadosMd = rawMarkdown.substring(0, matchIndex);
-        solucionesMd = rawMarkdown.substring(matchIndex);
+      // 2. Detección multilingüe por encabezados típicos de solución (## o ###)
+      // Cubre: Ejercicios Resueltos, Desarrollo, Soluciones, Detailed Solutions, Análisis Paso a Paso
+      const regexSoluciones = /(?:^|\n)(?:#{2,3}\s*(?:✍️\s*)?(?:[0-9]+\.\s*)?(?:Ejercicios\s+Resueltos|Desarrollo|Soluci[oó]n(?:es)?|Detailed\s+Solutions|An[aá]lisis\s+Sint[aá]ctico|Resoluci[oó]n))/i;
+      const match = rawMarkdown.match(regexSoluciones);
+      if (match && match.index !== undefined) {
+        // El punto de corte es donde empieza el encabezado de soluciones
+        const splitIndex = match.index + (match[0].startsWith('\n') ? 1 : 0);
+        enunciadosMd = rawMarkdown.substring(0, splitIndex);
+        solucionesMd = rawMarkdown.substring(splitIndex);
       }
     }
 
     let innerContentHtml = '';
 
-    if (solucionesMd) {
+    if (solucionesMd.trim()) {
       const enunciadosHtml = this.parseMarkdown(enunciadosMd);
       const solucionesHtml = this.parseMarkdown(solucionesMd);
       innerContentHtml = `

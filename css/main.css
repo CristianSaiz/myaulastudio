@@ -194,3 +194,11 @@
 .portada .cover-title-alumno {
   display: none !important;
 }
+
+/* Barras de scroll limpias y delgadas para el visor */
+.katex-display,
+.contenido-documento pre,
+.contenido-documento table {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}

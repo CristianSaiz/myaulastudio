@@ -29,6 +29,12 @@ const imageInput = document.getElementById('imageInput');
 const imagePreviewContainer = document.getElementById('imagePreviewContainer');
 const fileCountBadge = document.getElementById('fileCountBadge');
 
+// Logo academia
+const academyLogoInput = document.getElementById('academyLogoInput');
+const logoPreviewContainer = document.getElementById('logoPreviewContainer');
+const logoPreviewImg = document.getElementById('logoPreviewImg');
+const removeLogoBtn = document.getElementById('removeLogoBtn');
+
 // Portada / Datos de academia
 const academyNameInput = document.getElementById('academyName');
 const academySloganInput = document.getElementById('academySlogan');
@@ -48,7 +54,7 @@ const LEVEL_COURSE_SUGGESTIONS = {
 // 2. ESTADO LOCAL
 // --------------------------------------------------------------------------
 let uploadedFiles = [];          // [{ name, mimeType, base64, previewUrl }]
-let lastResolvedMarkdown = null; // Almacena la solución generada para no perderla al editar la portada
+let lastResolvedMarkdown = sessionStorage.getItem('myaulastudio_last_solution') || null;
 
 /**
  * Valida si el botón "Resolver" debe habilitarse según el contenido.
@@ -147,14 +153,27 @@ function updateFileListUI() {
 // 3. PERSISTENCIA EN LOCALSTORAGE
 // --------------------------------------------------------------------------
 function loadSavedPreferences() {
-  if (academyNameInput) {
-    academyNameInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyName) || APP_CONFIG.DEFAULTS.academyName;
-  }
-  if (academySloganInput) {
-    academySloganInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academySlogan) || APP_CONFIG.DEFAULTS.academySlogan;
-  }
-  if (academyCourseInput) {
-    academyCourseInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyCourse) || APP_CONFIG.DEFAULTS.academyCourse;
+  if (academyNameInput) academyNameInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyName) || '';
+  if (academySloganInput) academySloganInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academySlogan) || '';
+  if (academyCourseInput) academyCourseInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyCourse) || '';
+
+  // Carga de logo persistente
+  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+  const savedLogo = localStorage.getItem(logoKey);
+  updateLogoUI(savedLogo);
+}
+
+function updateLogoUI(logoBase64) {
+  if (!logoPreviewContainer || !logoPreviewImg || !removeLogoBtn) return;
+  if (logoBase64) {
+    logoPreviewImg.src = logoBase64;
+    logoPreviewContainer.classList.remove('hidden');
+    removeLogoBtn.classList.remove('hidden');
+  } else {
+    logoPreviewImg.src = '';
+    logoPreviewContainer.classList.add('hidden');
+    removeLogoBtn.classList.add('hidden');
+    if (academyLogoInput) academyLogoInput.value = '';
   }
 }
 
@@ -240,12 +259,16 @@ function renderCurrentView() {
   const includeCover = includeCoverCheckbox ? includeCoverCheckbox.checked : true;
   const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
 
+  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+  const savedLogo = localStorage.getItem(logoKey) || '';
+
   const coverHtml = PdfExporter.generateCoverHtml({
     includeCover: includeCover,
     academyName: academyNameInput?.value.trim(),
     academySlogan: academySloganInput?.value.trim(),
     academyCourse: academyCourseInput?.value.trim(),
-    subjectName: subjectName
+    subjectName: subjectName,
+    academyLogo: savedLogo
   });
 
   // Caso A: Ya hay una solución resuelta
@@ -383,20 +406,26 @@ modeRadios.forEach(radio => {
 
 // Manejadores de Impresión Dual (Versión Alumno vs Versión Profesor)
 if (downloadStudentPdfBtn) {
-  downloadStudentPdfBtn.addEventListener('click', () => {
+  downloadStudentPdfBtn.addEventListener('click', (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
     const academyName = academyNameInput ? academyNameInput.value.trim() : '';
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    PdfExporter.triggerPrint('student', { subjectName, academyName });
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    const academyLogo = localStorage.getItem(logoKey) || '';
+    PdfExporter.triggerPrint('student', { subjectName, academyName, academyCourse, academyLogo });
   });
 }
 
 if (downloadTeacherPdfBtn) {
-  downloadTeacherPdfBtn.addEventListener('click', () => {
+  downloadTeacherPdfBtn.addEventListener('click', (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
     const academyName = academyNameInput ? academyNameInput.value.trim() : '';
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    PdfExporter.triggerPrint('teacher', { subjectName, academyName });
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    const academyLogo = localStorage.getItem(logoKey) || '';
+    PdfExporter.triggerPrint('teacher', { subjectName, academyName, academyCourse, academyLogo });
   });
 }
 
@@ -442,6 +471,40 @@ if (startTrialBtn) {
   });
 }
 
+// Manejador para cargar logotipo en Base64
+if (academyLogoInput) {
+  academyLogoInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('El logotipo no debe superar los 2 MB.');
+      academyLogoInput.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target.result;
+      const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+      localStorage.setItem(logoKey, base64);
+      updateLogoUI(base64);
+      renderCurrentView();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Botón para eliminar logotipo y restaurar el icono escolar por defecto
+if (removeLogoBtn) {
+  removeLogoBtn.addEventListener('click', () => {
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    localStorage.removeItem(logoKey);
+    updateLogoUI(null);
+    renderCurrentView();
+  });
+}
+
 // --------------------------------------------------------------------------
 // 6. FLUJO PRINCIPAL: RESOLVER EJERCICIO
 // --------------------------------------------------------------------------
@@ -458,24 +521,39 @@ if (resolveBtn) {
       return;
     }
 
-    // Feedback visual de carga
+    // Feedback visual de carga con cronómetro en tiempo real
     resolveBtn.disabled = true;
     if (downloadStudentPdfBtn) downloadStudentPdfBtn.classList.add('hidden');
     if (downloadTeacherPdfBtn) downloadTeacherPdfBtn.classList.add('hidden');
 
+    // Mensaje descriptivo según el modo
     const loaderSubtext = APP_CONFIG.MOCK_MODE
       ? '🔧 Modo Simulación (Coste 0) activado...'
       : engineMode === 'pro'
-        ? 'Razonando paso a paso con máxima profundidad (~15-20 s)...'
-        : 'Resolviendo ejercicio con velocidad Flash (~3 s)...';
+        ? 'Razonando paso a paso con rigor analítico profundo...'
+        : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
 
     solutionContainer.innerHTML = `
       <div class="flex flex-col items-center justify-center h-80 gap-3 text-indigo-600">
         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-        <p class="text-sm font-semibold">${loaderSubtext}</p>
+        <p class="text-sm font-semibold text-center">${loaderSubtext}</p>
+        <div class="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full">
+          <span class="inline-block w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+          <span id="loadingTimer" class="text-xs font-mono font-bold text-indigo-700">Tiempo: 0 s</span>
+        </div>
         <p class="text-xs text-slate-400">Procesando ${uploadedFiles.length > 0 ? uploadedFiles.length + ' archivo(s)' : 'texto'}</p>
       </div>
     `;
+
+    // ⏱️ Cronómetro en vivo: avanza cada segundo
+    let elapsedSeconds = 0;
+    const intervalTimer = setInterval(() => {
+      elapsedSeconds++;
+      const timerDisplay = document.getElementById('loadingTimer');
+      if (timerDisplay) {
+        timerDisplay.textContent = `Tiempo: ${elapsedSeconds} s`;
+      }
+    }, 1000);
 
     try {
       const level = educationLevelSelect ? educationLevelSelect.value : 'bachillerato';
@@ -494,6 +572,7 @@ if (resolveBtn) {
 
       // Guardamos en memoria para permitir editar la portada después sin perder la solución
       lastResolvedMarkdown = rawMarkdown;
+      sessionStorage.setItem('myaulastudio_last_solution', rawMarkdown);
 
       // Renderizamos la vista combinada
       renderCurrentView();
@@ -519,6 +598,7 @@ if (resolveBtn) {
         </div>
       `;
     } finally {
+      clearInterval(intervalTimer);
       updateResolveButtonState();
     }
   });

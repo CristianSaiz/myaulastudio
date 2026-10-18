@@ -60,7 +60,8 @@ const APP_CONFIG = {
     apiKeyPrefix: 'myaulastudio_key_',
     academyName: 'myaulastudio_academy_name',
     academySlogan: 'myaulastudio_academy_slogan',
-    academyCourse: 'myaulastudio_academy_course'
+    academyCourse: 'myaulastudio_academy_course',
+    academyLogo: 'edtech_academy_logo',
   }
 };
 
