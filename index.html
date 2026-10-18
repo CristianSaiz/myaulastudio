@@ -227,7 +227,7 @@
       <div class="p-8 space-y-6">
         <div>
           <label for="licenseInput" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Clave de Licencia</label>
-          <input type="text" id="licenseInput" placeholder="Introduce tu clave mensual o anual" class="w-full border-2 border-slate-200 rounded-xl p-3 focus:border-indigo-500 focus:ring-0 transition-colors text-center font-mono text-lg tracking-widest">
+          <input type="text" id="licenseInput" placeholder="Introduce tu licencia" class="w-full border-2 border-slate-200 rounded-xl p-3 focus:border-indigo-500 focus:ring-0 transition-colors text-center font-mono text-lg tracking-widest">
           <p id="licenseError" class="text-red-500 text-xs mt-2 hidden text-center">Por favor, introduce una clave válida.</p>
         </div>
 
@@ -235,14 +235,38 @@
           Activar Licencia
         </button>
 
-        <div class="relative">
+        <!-- Separador -->
+        <div class="relative my-3">
           <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-slate-100"></div></div>
-          <div class="relative flex justify-center text-xs"><span class="px-2 bg-white text-slate-400">O PRUEBA LA HERRAMIENTA</span></div>
+          <div class="relative flex justify-center text-xs"><span class="px-2 bg-white text-slate-400">¿NO TIENES LICENCIA?</span></div>
         </div>
 
-        <button id="startTrialBtn" class="w-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold py-3 rounded-xl border border-emerald-200 transition-colors text-sm">
-          🚀 Iniciar prueba gratuita de 7 días (15 resoluciones)
-        </button>
+        <!-- Opciones de Contacto Dinámicas -->
+        <div class="space-y-2">
+          <p class="text-xs text-slate-500 text-center font-medium">
+            Solicita una clave de prueba para tu centro docente:
+          </p>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <!-- Botón WhatsApp -->
+            <a 
+              id="whatsappContactBtn"
+              href="#" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold transition-colors shadow-xs">
+              <span class="text-sm">💬</span> WhatsApp
+            </a>
+
+            <!-- Botón Email -->
+            <a 
+              id="emailContactBtn"
+              href="#" 
+              class="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-colors shadow-xs">
+              <span class="text-sm">✉️</span> Email
+            </a>
+          </div>
+        </div>
 
         <p class="text-[11px] text-slate-400 text-center leading-relaxed">
           Tu clave se almacena de forma segura en este navegador.<br>

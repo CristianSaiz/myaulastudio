@@ -16,7 +16,6 @@ const downloadTeacherPdfBtn = document.getElementById('downloadTeacherPdfBtn');
 const licenseModal = document.getElementById('licenseModal');
 const licenseInput = document.getElementById('licenseInput');
 const activateLicenseBtn = document.getElementById('activateLicenseBtn');
-const startTrialBtn = document.getElementById('startTrialBtn');
 const licenseError = document.getElementById('licenseError');
 const licenseBadge = document.getElementById('licenseBadge');
 
@@ -184,58 +183,66 @@ function saveAcademyPreferences() {
 }
 
 /**
+ * Control visual seguro del Modal (evita conflictos entre .flex y .hidden de Tailwind)
+ */
+function openLicenseModal() {
+  if (!licenseModal) return;
+  licenseModal.classList.remove('hidden');
+  licenseModal.style.display = 'flex';
+}
+
+function closeLicenseModal() {
+  if (!licenseModal) return;
+  licenseModal.classList.add('hidden');
+  licenseModal.style.display = 'none';
+}
+
+/**
  * Comprueba el estado de la licencia o periodo de prueba.
  * @returns {boolean} true si tiene permiso para resolver, false si está bloqueado.
  */
 function checkLicenseStatus(showAlert = false) {
   const licenseKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
 
-  // Caso 1: No hay clave introducida
+  // Caso 1: No hay clave introducida -> Abrir modal
   if (!licenseKey) {
     if (licenseBadge) licenseBadge.classList.add('hidden');
-    if (licenseModal) licenseModal.classList.remove('hidden');
+    openLicenseModal();
     return false;
   }
 
-  // Caso 2: Es la licencia de prueba (Trial)
+  // Caso 2: Es la licencia de prueba (Trial por 15 usos)
   if (licenseKey === APP_CONFIG.DEMO_LICENSE_KEY) {
-    let startDate = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialStartDate);
-    if (!startDate) {
-      startDate = Date.now().toString();
-      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialStartDate, startDate);
-    }
-
-    const daysElapsed = Math.floor((Date.now() - parseInt(startDate, 10)) / (1000 * 60 * 60 * 24));
-    const daysLeft = Math.max(0, APP_CONFIG.TRIAL_MAX_DAYS - daysElapsed);
     const usageCount = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
-    const usageLeft = Math.max(0, APP_CONFIG.TRIAL_MAX_USAGE - usageCount);
+    const maxUsage = APP_CONFIG.TRIAL_MAX_USAGE || 15;
+    const usageLeft = Math.max(0, maxUsage - usageCount);
 
-    if (daysElapsed >= APP_CONFIG.TRIAL_MAX_DAYS || usageCount >= APP_CONFIG.TRIAL_MAX_USAGE) {
+    if (usageCount >= maxUsage) {
       if (licenseBadge) {
         licenseBadge.classList.remove('hidden');
         licenseBadge.className = 'text-[10px] bg-red-500/80 border border-red-300 px-2 py-1 rounded-md text-white font-semibold cursor-pointer';
-        licenseBadge.textContent = 'Trial Expirado';
+        licenseBadge.textContent = 'Prueba Agotada (0/15)';
       }
-      if (licenseModal) licenseModal.classList.remove('hidden');
+      openLicenseModal();
       if (showAlert) {
-        alert(daysElapsed >= APP_CONFIG.TRIAL_MAX_DAYS 
-          ? 'Tu periodo de prueba de 7 días ha finalizado. Introduce una clave de centro.' 
-          : 'Has alcanzado el límite de 15 resoluciones de prueba. Introduce una clave de centro.');
+        alert('Has alcanzado el límite de 15 resoluciones de prueba. Introduce una clave de centro para continuar.');
       }
       return false;
     }
 
-    // Trial activo dentro de límites
+    // Trial activo dentro de límites -> Cerrar modal y mostrar badge
+    closeLicenseModal();
     if (licenseBadge) {
       licenseBadge.classList.remove('hidden');
       licenseBadge.className = 'text-[10px] bg-emerald-500/80 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';
-      licenseBadge.textContent = `Prueba: ${usageLeft}/15 usos (${daysLeft}d)`;
+      licenseBadge.textContent = `Prueba: ${usageLeft}/${maxUsage} usos`;
       licenseBadge.title = 'Haz clic para cambiar o introducir clave de centro';
     }
     return true;
   }
 
-  // Caso 3: Licencia de centro completa
+  // Caso 3: Licencia de centro completa / vitalicia -> Cerrar modal y mostrar badge
+  closeLicenseModal();
   if (licenseBadge) {
     licenseBadge.classList.remove('hidden');
     licenseBadge.className = 'text-[10px] bg-indigo-500/60 hover:bg-indigo-500 border border-indigo-300/40 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';
@@ -432,7 +439,7 @@ if (downloadTeacherPdfBtn) {
 // Abrir modal al pulsar en el badge del header
 if (licenseBadge) {
   licenseBadge.addEventListener('click', () => {
-    if (licenseModal) licenseModal.classList.remove('hidden');
+    openLicenseModal();
     if (licenseInput) {
       const current = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
       licenseInput.value = current === APP_CONFIG.DEMO_LICENSE_KEY ? '' : (current || '');
@@ -451,22 +458,7 @@ if (activateLicenseBtn) {
     if (licenseError) licenseError.classList.add('hidden');
 
     localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, key);
-    if (licenseModal) licenseModal.classList.add('hidden');
-    checkLicenseStatus();
-  });
-}
-
-// Botón Iniciar Prueba de 7 días
-if (startTrialBtn) {
-  startTrialBtn.addEventListener('click', () => {
-    localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, APP_CONFIG.DEMO_LICENSE_KEY);
-    if (!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialStartDate)) {
-      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialStartDate, Date.now().toString());
-    }
-    if (!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount)) {
-      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, '0');
-    }
-    if (licenseModal) licenseModal.classList.add('hidden');
+    closeLicenseModal();
     checkLicenseStatus();
   });
 }
@@ -612,7 +604,30 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCurrentView();
   updateResolveButtonState();
   checkLicenseStatus();
+  setupContactLinks();
 });
+
+/**
+ * Configura los enlaces de WhatsApp y Email leyendo los datos de APP_CONFIG.CONTACT
+ */
+function setupContactLinks() {
+  const whatsappBtn = document.getElementById('whatsappContactBtn');
+  const emailBtn = document.getElementById('emailContactBtn');
+  const contact = APP_CONFIG.CONTACT;
+
+  if (!contact) return;
+
+  if (whatsappBtn && contact.whatsappPhone) {
+    const text = encodeURIComponent(contact.whatsappMessage || '');
+    whatsappBtn.href = `https://wa.me/${contact.whatsappPhone}?text=${text}`;
+  }
+
+  if (emailBtn && contact.email) {
+    const subject = encodeURIComponent(contact.emailSubject || '');
+    const body = encodeURIComponent(contact.emailBody || '');
+    emailBtn.href = `mailto:${contact.email}?subject=${subject}&body=${body}`;
+  }
+}
 
 // Llamada inmediata de sincronización
 updateResolveButtonState();

@@ -22,7 +22,6 @@ const APP_CONFIG = {
   MAX_FILES: 7,
 
   // Configuración del periodo de prueba (Trial)
-  TRIAL_MAX_DAYS: 7,
   TRIAL_MAX_USAGE: 15,
   DEMO_LICENSE_KEY: 'DEMO-TRIAL-7D',
 
@@ -55,13 +54,26 @@ const APP_CONFIG = {
   // Claves fijas utilizadas en localStorage
   STORAGE_KEYS: {
     licenseKey: 'edtech_license_key',
-    trialStartDate: 'edtech_trial_start',
     trialUsageCount: 'edtech_trial_usage',
     apiKeyPrefix: 'myaulastudio_key_',
     academyName: 'myaulastudio_academy_name',
     academySlogan: 'myaulastudio_academy_slogan',
     academyCourse: 'myaulastudio_academy_course',
     academyLogo: 'edtech_academy_logo',
+  },
+
+  // ------------------------------------------------------------------------
+  // CONTACTO COMERCIAL Y SOPORTE (Solicitud de Licencias)
+  // ------------------------------------------------------------------------
+  CONTACT: {
+    // Teléfono con prefijo internacional sin signos ni espacios (ej: 34612345678)
+    whatsappPhone: '34633102444', 
+    whatsappMessage: 'Hola, me gustaría solicitar una clave de acceso para MyAulaStudio',
+    
+    // Correo actual (puedes poner tu Gmail personal o el que uses ahora)
+    email: 'c.saiz.montes@gmail.com',
+    emailSubject: 'Solicitud de Licencia MyAulaStudio',
+    emailBody: 'Hola, me gustaría probar MyAulaStudio en mi centro educativo o clases particulares.'
   }
 };
 
