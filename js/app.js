@@ -69,13 +69,65 @@ function updateResolveButtonState() {
 }
 
 /**
- * Convierte un archivo File a Base64 puro.
+ * Comprime y reescala imágenes en el navegador mediante Canvas antes de enviar.
+ * Reduce fotos de móvil (8-15 MB) a ~300 KB manteniendo nitidez matemática.
+ * Si el archivo es un PDF, se lee directamente sin alteración.
  */
-function fileToBase64(file) {
+function processUploadedFile(file) {
   return new Promise((resolve, reject) => {
+    // Si es PDF, lectura directa a Base64
+    if (file.type === 'application/pdf') {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          base64: reader.result.split(',')[1],
+          mimeType: 'application/pdf',
+          previewUrl: null
+        });
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    // Si es imagen, redimensionar y comprimir en memoria con Canvas
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = (err) => reject(err);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1600; // Resolución óptima para OCR y lectura de fórmulas
+        let { width, height } = img;
+
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const ratio = Math.min(MAX_DIM / width, MAX_DIM / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        // Fondo blanco protector para evitar fondos negros en capturas con transparencia
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // JPEG al 82% de calidad (equilibrio perfecto nitidez/peso)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        const base64 = dataUrl.split(',')[1];
+
+        resolve({
+          base64,
+          mimeType: 'image/jpeg',
+          previewUrl: dataUrl
+        });
+      };
+      img.onerror = () => reject(new Error('No se pudo procesar la imagen para compresión.'));
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
     reader.readAsDataURL(file);
   });
 }
@@ -383,12 +435,12 @@ if (imageInput) {
 
     for (const file of selected) {
       try {
-        const base64 = await fileToBase64(file);
+        const processed = await processUploadedFile(file);
         uploadedFiles.push({
           name: file.name,
-          mimeType: file.type || 'application/pdf',
-          base64: base64,
-          previewUrl: file.type.startsWith('image/') ? `data:${file.type};base64,${base64}` : null
+          mimeType: processed.mimeType,
+          base64: processed.base64,
+          previewUrl: processed.previewUrl
         });
       } catch (err) {
         console.error('Error al procesar el archivo:', err);
