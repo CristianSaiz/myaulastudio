@@ -11,6 +11,7 @@ const resolveBtn = document.getElementById('resolveBtn');
 const solutionContainer = document.getElementById('solutionContainer');
 const downloadStudentPdfBtn = document.getElementById('downloadStudentPdfBtn');
 const downloadTeacherPdfBtn = document.getElementById('downloadTeacherPdfBtn');
+const newExerciseBtn = document.getElementById('newExerciseBtn');
 
 // Selectores del Modal de Licencia
 const licenseModal = document.getElementById('licenseModal');
@@ -281,12 +282,14 @@ function renderCurrentView() {
   // Caso A: Ya hay una solución resuelta
   if (lastResolvedMarkdown) {
     MarkdownMathRenderer.renderDocument(solutionContainer, lastResolvedMarkdown, coverHtml);
+    if (newExerciseBtn) newExerciseBtn.classList.remove('hidden');
     if (downloadStudentPdfBtn) downloadStudentPdfBtn.classList.remove('hidden');
     if (downloadTeacherPdfBtn) downloadTeacherPdfBtn.classList.remove('hidden');
     return;
   }
 
   // Caso B: Estado inicial (antes de pulsar "Resolver")
+  if (newExerciseBtn) newExerciseBtn.classList.add('hidden');
   if (downloadStudentPdfBtn) downloadStudentPdfBtn.classList.add('hidden');
   if (downloadTeacherPdfBtn) downloadTeacherPdfBtn.classList.add('hidden');
 
@@ -460,6 +463,24 @@ modeRadios.forEach(radio => {
     }
   });
 });
+
+// Manejador para reiniciar el lienzo y preparar un nuevo ejercicio
+if (newExerciseBtn) {
+  newExerciseBtn.addEventListener('click', () => {
+    // 1. Limpiar estado de la solución en memoria y en sessionStorage
+    lastResolvedMarkdown = null;
+    sessionStorage.removeItem('myaulastudio_last_solution');
+
+    // 2. Limpiar texto de entrada y archivos adjuntos
+    if (problemInput) problemInput.value = '';
+    uploadedFiles = [];
+    updateFileListUI();
+
+    // 3. Restaurar la vista previa limpia de la portada y actualizar botón Resolver
+    renderCurrentView();
+    updateResolveButtonState();
+  });
+}
 
 // Manejadores de Impresión Dual (Versión Alumno vs Versión Profesor)
 if (downloadStudentPdfBtn) {

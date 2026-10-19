@@ -55,6 +55,7 @@ html, body {
 body > header,
 main > section:first-child,
 main > section:last-child > div:first-child,
+#newExerciseBtn,
 #downloadStudentPdfBtn,
 #downloadTeacherPdfBtn,
 button {
