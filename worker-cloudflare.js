@@ -3,6 +3,7 @@ export default {
     // 1. Orígenes autorizados (CORS estricto)
     const allowedOrigins = [
       'https://myaulastudio.vercel.app',
+      'https://cristiansaiz.github.io',
       'http://localhost:5500',
       'http://127.0.0.1:5500',
       'http://localhost:8000',
@@ -20,14 +21,35 @@ export default {
       'Access-Control-Expose-Headers': 'x-usage-count, x-usage-left',
     };
 
-    // Preflight OPTIONS
+    // Preflight OPTIONS (negociación del navegador)
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Solo se permite método POST
     if (request.method !== 'POST') {
       return new Response(JSON.stringify({ error: 'Método no permitido' }), {
         status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // [TAREA 3] Bloqueo estricto si viene de un origen web no autorizado
+    if (origin && !isAllowedOrigin) {
+      return new Response(JSON.stringify({ error: 'Acceso no autorizado desde este origen.' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // [TAREA 2] Validación de carga útil: Techo de 5 MB
+    const MAX_PAYLOAD_SIZE = 5 * 1024 * 1024; // 5 Megabytes
+    const contentLength = parseInt(request.headers.get('Content-Length') || '0', 10);
+    if (contentLength > MAX_PAYLOAD_SIZE) {
+      return new Response(JSON.stringify({ 
+        error: 'El tamaño de la petición excede el límite permitido de 5 MB.' 
+      }), {
+        status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -57,11 +79,11 @@ export default {
 
       if (!isVipLicense && env.LICENCIAS_KV) {
         storedUsage = await env.LICENCIAS_KV.get(licenseKey);
-        // Si la clave existe en KV (incluso con valor "0"), es una Demo válida dada de alta por ti
+        // Si existe en KV previamente creada por ti, es una demo autorizada
         isDemoLicense = (storedUsage !== null);
       }
 
-      // Si no es VIP ni existe previamente en KV -> BLOQUEO INMEDIATO
+      // Si no es VIP ni está registrada en KV -> BLOQUEO INMEDIATO
       if (!isVipLicense && !isDemoLicense) {
         return new Response(JSON.stringify({ 
           error: 'Licencia no válida o no registrada. Solicita tu clave de prueba autorizada.' 

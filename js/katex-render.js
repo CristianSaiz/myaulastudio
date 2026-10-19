@@ -42,10 +42,14 @@ const MarkdownMathRenderer = {
       return id;
     });
 
-    // 3. Parsear el resto de la estructura Markdown a HTML
-    let html = (typeof marked !== 'undefined' && marked.parse)
+    // 3. Parsear el resto de la estructura Markdown a HTML y desinfectar (Anti-XSS)
+    let rawHtml = (typeof marked !== 'undefined' && marked.parse)
       ? marked.parse(protectedText)
       : protectedText.replace(/\n/g, '<br>');
+
+    let html = (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize)
+      ? DOMPurify.sanitize(rawHtml)
+      : rawHtml;
 
     // 4. Renderizar las fórmulas directamente con KaTeX conservando los '\\' intactos
     mathBlocks.forEach(item => {
