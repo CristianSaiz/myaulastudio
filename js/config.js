@@ -4,29 +4,30 @@
 
 const APP_CONFIG = {
   // ------------------------------------------------------------------------
-  // INTERRUPTOR DE PRUEBAS (Coste Cero)
+  // INTERRUPTOR DE MODO REAL / SIMULACIÓN
   // ------------------------------------------------------------------------
-  // true  -> No llama a la API externa. Devuelve datos simulados al instante
-  //          para ajustar maquetación, KaTeX y la portada sin consumir cuota.
-  // false -> Realiza la llamada HTTP real hacia Gemini o el proveedor elegido.
-  MOCK_MODE: true,
+  // false -> Modo Producción: conecta con Cloudflare Worker, KV y Gemini.
+  // true  -> Modo Pruebas: responde localmente con datos simulados (coste 0).
+  MOCK_MODE: false,
 
   // Endpoint de tu proxy seguro en Cloudflare Workers
   WORKER_URL: 'https://resolutor-edtech-api.c-saiz-montes.workers.dev',
 
   // Retardo simulado en milisegundos cuando MOCK_MODE está activo
-  // (permite verificar que la animación de carga/spinner funciona visualmente)
   MOCK_DELAY_MS: 600,
 
   // Límite máximo de archivos adjuntos simultáneos
   MAX_FILES: 7,
 
-  // Configuración del periodo de prueba (Trial)
+  // Límite máximo de resoluciones para claves demo/prueba
   TRIAL_MAX_USAGE: 15,
-  DEMO_LICENSE_KEY: 'DEMO-TRIAL-7D',
 
-  // Orígenes permitidos para el Worker
-  ALLOWED_ORIGIN: ['https://myaulastudio.vercel.app', 'http://localhost:5500'],
+  // Orígenes autorizados (CORS)
+  ALLOWED_ORIGIN: [
+    'https://myaulastudio.vercel.app',
+    'http://localhost:5500',
+    'http://127.0.0.1:5500'
+  ],
 
   // Clave de licencia guardada en localStorage
   STORAGE_LICENSE_KEY: 'edtech_license_key',
@@ -59,18 +60,18 @@ const APP_CONFIG = {
     academyName: 'myaulastudio_academy_name',
     academySlogan: 'myaulastudio_academy_slogan',
     academyCourse: 'myaulastudio_academy_course',
-    academyLogo: 'edtech_academy_logo',
+    academyLogo: 'edtech_academy_logo'
   },
 
   // ------------------------------------------------------------------------
   // CONTACTO COMERCIAL Y SOPORTE (Solicitud de Licencias)
   // ------------------------------------------------------------------------
   CONTACT: {
-    // Teléfono con prefijo internacional sin signos ni espacios (ej: 34612345678)
+    // Teléfono con prefijo internacional sin signos ni espacios
     whatsappPhone: '34633102444', 
     whatsappMessage: 'Hola, me gustaría solicitar una clave de acceso para MyAulaStudio',
     
-    // Correo actual (puedes poner tu Gmail personal o el que uses ahora)
+    // Correo de contacto
     email: 'c.saiz.montes@gmail.com',
     emailSubject: 'Solicitud de Licencia MyAulaStudio',
     emailBody: 'Hola, me gustaría probar MyAulaStudio en mi centro educativo o clases particulares.'
@@ -82,3 +83,4 @@ Object.freeze(APP_CONFIG);
 Object.freeze(APP_CONFIG.MODELS);
 Object.freeze(APP_CONFIG.DEFAULTS);
 Object.freeze(APP_CONFIG.STORAGE_KEYS);
+Object.freeze(APP_CONFIG.CONTACT);

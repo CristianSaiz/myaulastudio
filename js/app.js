@@ -12,7 +12,7 @@ const solutionContainer = document.getElementById('solutionContainer');
 const downloadStudentPdfBtn = document.getElementById('downloadStudentPdfBtn');
 const downloadTeacherPdfBtn = document.getElementById('downloadTeacherPdfBtn');
 
-// Selectores del Modal de Licencia y Trial
+// Selectores del Modal de Licencia
 const licenseModal = document.getElementById('licenseModal');
 const licenseInput = document.getElementById('licenseInput');
 const activateLicenseBtn = document.getElementById('activateLicenseBtn');
@@ -149,7 +149,7 @@ function updateFileListUI() {
 }
 
 // --------------------------------------------------------------------------
-// 3. PERSISTENCIA EN LOCALSTORAGE
+// 3. PERSISTENCIA EN LOCALSTORAGE Y MODAL DE LICENCIA
 // --------------------------------------------------------------------------
 function loadSavedPreferences() {
   if (academyNameInput) academyNameInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyName) || '';
@@ -157,7 +157,7 @@ function loadSavedPreferences() {
   if (academyCourseInput) academyCourseInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyCourse) || '';
 
   // Carga de logo persistente
-  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
   const savedLogo = localStorage.getItem(logoKey);
   updateLogoUI(savedLogo);
 }
@@ -183,7 +183,7 @@ function saveAcademyPreferences() {
 }
 
 /**
- * Control visual seguro del Modal (evita conflictos entre .flex y .hidden de Tailwind)
+ * Control visual seguro del Modal (inmune a conflictos CSS)
  */
 function openLicenseModal() {
   if (!licenseModal) return;
@@ -211,7 +211,7 @@ function checkLicenseStatus(showAlert = false) {
     return false;
   }
 
-  // Caso 2: Es la licencia de prueba (Trial por 15 usos)
+  // Caso 2: Es una clave de prueba (prefijos DEMO- o TRIAL-)
   const isDemo = licenseKey.startsWith('DEMO-') || licenseKey.startsWith('TRIAL-');
 
   if (isDemo) {
@@ -227,21 +227,22 @@ function checkLicenseStatus(showAlert = false) {
       }
       openLicenseModal();
       if (showAlert) {
-        alert('Has alcanzado el límite de 15 resoluciones de prueba de esta clave.');
+        alert(`Has alcanzado el límite de ${maxUsage} resoluciones de prueba de esta clave. Contacta para suscribirte.`);
       }
       return false;
     }
 
+    closeLicenseModal();
     if (licenseBadge) {
       licenseBadge.classList.remove('hidden');
       licenseBadge.className = 'text-[10px] bg-emerald-500/80 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';
       licenseBadge.textContent = `Prueba: ${usageLeft}/${maxUsage} usos`;
-      licenseBadge.title = 'Haz clic para cambiar o introducir clave de centro';
+      licenseBadge.title = 'Haz clic para cambiar o ver la clave';
     }
     return true;
   }
 
-  // Caso 3: Licencia de centro completa / vitalicia -> Cerrar modal y mostrar badge
+  // Caso 3: Licencia de centro completa / vitalicia -> Ilimitada
   closeLicenseModal();
   if (licenseBadge) {
     licenseBadge.classList.remove('hidden');
@@ -255,18 +256,13 @@ function checkLicenseStatus(showAlert = false) {
 // --------------------------------------------------------------------------
 // 4. PREVISUALIZACIÓN REACTIVA EN TIEMPO REAL
 // --------------------------------------------------------------------------
-/**
- * Renderiza el visor derecho (#solutionContainer).
- * Si hay solución previa, refresca la portada y mantiene el markdown resuelto.
- * Si no hay solución previa, muestra la portada en vivo o el placeholder vacío.
- */
 function renderCurrentView() {
   if (!solutionContainer) return;
 
   const includeCover = includeCoverCheckbox ? includeCoverCheckbox.checked : true;
   const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
 
-  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+  const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
   const savedLogo = localStorage.getItem(logoKey) || '';
 
   const coverHtml = PdfExporter.generateCoverHtml({
@@ -332,14 +328,14 @@ if (includeCoverCheckbox) {
   });
 }
 
-// Reacción al cambiar la materia (actualiza el subtítulo de la portada)
+// Reacción al cambiar la materia
 if (subjectSelect) {
   subjectSelect.addEventListener('change', () => {
     renderCurrentView();
   });
 }
 
-// Reacción al cambiar el nivel educativo (auto-rellena la portada pero deja editarlo libremente)
+// Reacción al cambiar el nivel educativo (auto-rellenado con edición libre)
 if (educationLevelSelect && academyCourseInput) {
   educationLevelSelect.addEventListener('change', (e) => {
     const suggested = LEVEL_COURSE_SUGGESTIONS[e.target.value];
@@ -418,7 +414,7 @@ if (downloadStudentPdfBtn) {
     const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
     const academyName = academyNameInput ? academyNameInput.value.trim() : '';
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
     const academyLogo = localStorage.getItem(logoKey) || '';
     PdfExporter.triggerPrint('student', { subjectName, academyName, academyCourse, academyLogo });
   });
@@ -430,7 +426,7 @@ if (downloadTeacherPdfBtn) {
     const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
     const academyName = academyNameInput ? academyNameInput.value.trim() : '';
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
     const academyLogo = localStorage.getItem(logoKey) || '';
     PdfExporter.triggerPrint('teacher', { subjectName, academyName, academyCourse, academyLogo });
   });
@@ -442,7 +438,7 @@ if (licenseBadge) {
     openLicenseModal();
     if (licenseInput) {
       const current = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
-      licenseInput.value = current === APP_CONFIG.DEMO_LICENSE_KEY ? '' : (current || '');
+      licenseInput.value = current || '';
     }
   });
 }
@@ -456,6 +452,12 @@ if (activateLicenseBtn) {
       return;
     }
     if (licenseError) licenseError.classList.add('hidden');
+
+    const previousKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+    // Si cambia de clave demo, reinicia el contador local para consultar al Worker de cero
+    if (previousKey !== key) {
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, '0');
+    }
 
     localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, key);
     closeLicenseModal();
@@ -478,7 +480,7 @@ if (academyLogoInput) {
     const reader = new FileReader();
     reader.onload = (event) => {
       const base64 = event.target.result;
-      const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+      const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
       localStorage.setItem(logoKey, base64);
       updateLogoUI(base64);
       renderCurrentView();
@@ -490,7 +492,7 @@ if (academyLogoInput) {
 // Botón para eliminar logotipo y restaurar el icono escolar por defecto
 if (removeLogoBtn) {
   removeLogoBtn.addEventListener('click', () => {
-    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'myaulastudio_academy_logo';
+    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
     localStorage.removeItem(logoKey);
     updateLogoUI(null);
     renderCurrentView();
@@ -518,7 +520,6 @@ if (resolveBtn) {
     if (downloadStudentPdfBtn) downloadStudentPdfBtn.classList.add('hidden');
     if (downloadTeacherPdfBtn) downloadTeacherPdfBtn.classList.add('hidden');
 
-    // Mensaje descriptivo según el modo
     const loaderSubtext = APP_CONFIG.MOCK_MODE
       ? '🔧 Modo Simulación (Coste 0) activado...'
       : engineMode === 'pro'
@@ -537,7 +538,7 @@ if (resolveBtn) {
       </div>
     `;
 
-    // ⏱️ Cronómetro en vivo: avanza cada segundo
+    // Cronómetro en vivo
     let elapsedSeconds = 0;
     const intervalTimer = setInterval(() => {
       elapsedSeconds++;
@@ -551,10 +552,10 @@ if (resolveBtn) {
       const level = educationLevelSelect ? educationLevelSelect.value : 'bachillerato';
       const systemPrompt = getSystemPrompt(subject, level);
 
-      // Petición a la API (o Mock)
+      // Petición a la API (o Mock según MOCK_MODE)
       const rawMarkdown = await ApiClient.resolveExercise({
         provider: 'gemini',
-        apiKey: '', // Se gestionará por el worker / mock
+        apiKey: '',
         systemPrompt,
         userMessage: problem,
         files: uploadedFiles,
@@ -562,20 +563,25 @@ if (resolveBtn) {
         subject
       });
 
-      // Guardamos en memoria para permitir editar la portada después sin perder la solución
+      // Guardamos en memoria y sessionStorage para sobrevivir a descargas de PDF
       lastResolvedMarkdown = rawMarkdown;
       sessionStorage.setItem('myaulastudio_last_solution', rawMarkdown);
 
       // Renderizamos la vista combinada
       renderCurrentView();
 
-      // Si está en modo prueba, descontar 1 uso
-      const currentKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
-      if (currentKey === APP_CONFIG.DEMO_LICENSE_KEY) {
-        const count = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, (count + 1).toString());
-        checkLicenseStatus();
+      // Si está en MOCK_MODE, simula el descuento localmente para desarrollo
+      if (APP_CONFIG.MOCK_MODE) {
+        const currentKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+        const isDemo = currentKey && (currentKey.startsWith('DEMO-') || currentKey.startsWith('TRIAL-'));
+        if (isDemo) {
+          const count = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
+          localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, (count + 1).toString());
+        }
       }
+
+      // Refresca el estado de la licencia y el contador (sincronizado con KV desde api.js)
+      checkLicenseStatus();
 
       // Limpieza automática de fotos/PDFs adjuntos tras resolver
       uploadedFiles = [];
