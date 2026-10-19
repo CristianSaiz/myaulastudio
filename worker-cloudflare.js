@@ -43,44 +43,51 @@ export default {
         });
       }
 
-      // Licencias VIP / Mensuales autorizadas en variables de Cloudflare
-      const allowedLicenses = (env.ALLOWED_LICENSES || '')
+      // Comprobación de Licencia VIP / Ilimitada (Variables de Cloudflare)
+      const allowedVipLicenses = (env.ALLOWED_LICENSES || '')
         .split(',')
         .map(k => k.trim())
         .filter(Boolean);
 
-      const isVipLicense = allowedLicenses.includes(licenseKey);
-      const isDemoLicense = licenseKey.startsWith('DEMO-') || licenseKey.startsWith('TRIAL-');
+      const isVipLicense = allowedVipLicenses.includes(licenseKey);
 
+      // Comprobación de Licencia DEMO en Cloudflare KV (Opción B)
+      let storedUsage = null;
+      let isDemoLicense = false;
+
+      if (!isVipLicense && env.LICENCIAS_KV) {
+        storedUsage = await env.LICENCIAS_KV.get(licenseKey);
+        // Si la clave existe en KV (incluso con valor "0"), es una Demo válida dada de alta por ti
+        isDemoLicense = (storedUsage !== null);
+      }
+
+      // Si no es VIP ni existe previamente en KV -> BLOQUEO INMEDIATO
       if (!isVipLicense && !isDemoLicense) {
-        return new Response(JSON.stringify({ error: 'Licencia no válida o no registrada.' }), {
+        return new Response(JSON.stringify({ 
+          error: 'Licencia no válida o no registrada. Solicita tu clave de prueba autorizada.' 
+        }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
       // 3. Control de cuota en Cloudflare KV (solo aplica a claves Demo)
-      let currentUsage = 0;
+      let currentUsage = storedUsage ? parseInt(storedUsage, 10) : 0;
       const MAX_TRIAL_USAGE = 15;
 
       if (!isVipLicense && isDemoLicense) {
-        if (env.LICENCIAS_KV) {
-          const storedUsage = await env.LICENCIAS_KV.get(licenseKey);
-          currentUsage = storedUsage ? parseInt(storedUsage, 10) : 0;
-
-          if (currentUsage >= MAX_TRIAL_USAGE) {
-            return new Response(JSON.stringify({ 
-              error: `Has alcanzado el límite de ${MAX_TRIAL_USAGE} resoluciones de prueba de esta clave. Contacta por WhatsApp para activar tu plan mensual.` 
-            }), {
-              status: 403,
-              headers: { 
-                ...corsHeaders, 
-                'Content-Type': 'application/json',
-                'x-usage-count': String(currentUsage),
-                'x-usage-left': '0'
-              }
-            });
-          }
+        if (currentUsage >= MAX_TRIAL_USAGE) {
+          return new Response(JSON.stringify({ 
+            error: `Has alcanzado el límite de ${MAX_TRIAL_USAGE} resoluciones de prueba. Contacta por WhatsApp para activar tu plan mensual.` 
+          }), {
+            status: 403,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json',
+              'x-usage-count': String(currentUsage),
+              'x-usage-left': '0'
+            }
+          });
         }
       }
 
@@ -95,12 +102,11 @@ export default {
         });
       }
 
-      // Inyectar control de pensamiento según el modelo para evitar tiempos de espera > 100s
+      // Inyección de control de pensamiento para evitar timeouts
       const geminiBody = {
         ...payload.geminiData,
         generationConfig: {
           temperature: 0.2,
-          // thinkingLevel "low" para Gemini 3.x Flash; thinkingBudget para 2.5
           thinkingConfig: model.startsWith('gemini-3') 
             ? { thinkingLevel: 'low' } 
             : { thinkingBudget: 1024 }
