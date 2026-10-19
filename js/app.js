@@ -7,6 +7,7 @@
 // --------------------------------------------------------------------------
 const subjectSelect = document.getElementById('subject');
 const problemInput = document.getElementById('problemInput');
+const problemLabel = document.getElementById('problemLabel');
 const resolveBtn = document.getElementById('resolveBtn');
 const solutionContainer = document.getElementById('solutionContainer');
 const downloadStudentPdfBtn = document.getElementById('downloadStudentPdfBtn');
@@ -138,6 +139,17 @@ function processUploadedFile(file) {
 function updateFileListUI() {
   const count = uploadedFiles.length;
   const max = APP_CONFIG.MAX_FILES;
+
+  // Adaptación reactiva de la etiqueta y placeholder según haya fotos o no
+  if (problemLabel && problemInput) {
+    if (count > 0) {
+      problemLabel.textContent = 'Instrucciones o aclaraciones sobre los archivos (opcional)';
+      problemInput.placeholder = 'Ej: «Resuelve solo el ejercicio 3b», «Usa el método de Gauss», o déjalo vacío para resolver todo...';
+    } else {
+      problemLabel.textContent = 'Enunciado o transcripción';
+      problemInput.placeholder = 'Pega aquí el problema o transcribe el texto a resolver...';
+    }
+  }
 
   if (fileCountBadge) {
     fileCountBadge.textContent = `${count} / ${max}`;

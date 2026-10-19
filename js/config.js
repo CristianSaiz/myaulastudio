@@ -8,7 +8,7 @@ const APP_CONFIG = {
   // ------------------------------------------------------------------------
   // false -> Modo Producción: conecta con Cloudflare Worker, KV y Gemini.
   // true  -> Modo Pruebas: responde localmente con datos simulados (coste 0).
-  MOCK_MODE: true,
+  MOCK_MODE: false,
 
   // Endpoint de tu proxy seguro en Cloudflare Workers
   WORKER_URL: 'https://resolutor-edtech-api.c-saiz-montes.workers.dev',
