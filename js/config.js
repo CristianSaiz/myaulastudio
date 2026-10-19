@@ -8,7 +8,7 @@ const APP_CONFIG = {
   // ------------------------------------------------------------------------
   // false -> Modo Producción: conecta con Cloudflare Worker, KV y Gemini.
   // true  -> Modo Pruebas: responde localmente con datos simulados (coste 0).
-  MOCK_MODE: false,
+  MOCK_MODE: true,
 
   // Endpoint de tu proxy seguro en Cloudflare Workers
   WORKER_URL: 'https://resolutor-edtech-api.c-saiz-montes.workers.dev',
@@ -48,6 +48,7 @@ const APP_CONFIG = {
     academyName: 'Mates, Amor y Magia',
     academySlogan: 'Donde las matemáticas cobran sentido',
     academyCourse: '2º Bachillerato · Ciencias',
+    coverTitle: 'Ejercicios Resueltos',
     provider: 'gemini',
     subject: 'math'
   },
@@ -60,7 +61,8 @@ const APP_CONFIG = {
     academyName: 'myaulastudio_academy_name',
     academySlogan: 'myaulastudio_academy_slogan',
     academyCourse: 'myaulastudio_academy_course',
-    academyLogo: 'edtech_academy_logo'
+    academyLogo: 'edtech_academy_logo',
+    coverTitle: 'myaulastudio_cover_title'
   },
 
   // ------------------------------------------------------------------------

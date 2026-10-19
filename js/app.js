@@ -38,6 +38,7 @@ const removeLogoBtn = document.getElementById('removeLogoBtn');
 const academyNameInput = document.getElementById('academyName');
 const academySloganInput = document.getElementById('academySlogan');
 const academyCourseInput = document.getElementById('academyCourse');
+const coverTitleInput = document.getElementById('coverTitle');
 const includeCoverCheckbox = document.getElementById('includeCover');
 
 const educationLevelSelect = document.getElementById('educationLevel');
@@ -155,6 +156,7 @@ function loadSavedPreferences() {
   if (academyNameInput) academyNameInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyName) || '';
   if (academySloganInput) academySloganInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academySlogan) || '';
   if (academyCourseInput) academyCourseInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyCourse) || '';
+  if (coverTitleInput) coverTitleInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.coverTitle) || '';
 
   // Carga de logo persistente
   const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
@@ -180,6 +182,7 @@ function saveAcademyPreferences() {
   if (academyNameInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academyName, academyNameInput.value.trim());
   if (academySloganInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academySlogan, academySloganInput.value.trim());
   if (academyCourseInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.academyCourse, academyCourseInput.value.trim());
+  if (coverTitleInput) localStorage.setItem(APP_CONFIG.STORAGE_KEYS.coverTitle, coverTitleInput.value.trim());
 }
 
 /**
@@ -271,7 +274,8 @@ function renderCurrentView() {
     academySlogan: academySloganInput?.value.trim(),
     academyCourse: academyCourseInput?.value.trim(),
     subjectName: subjectName,
-    academyLogo: savedLogo
+    academyLogo: savedLogo,
+    coverTitle: coverTitleInput?.value.trim()
   });
 
   // Caso A: Ya hay una solución resuelta
@@ -312,7 +316,7 @@ function renderCurrentView() {
 // --------------------------------------------------------------------------
 
 // Reacción en tiempo real al escribir en los datos de la portada
-[academyNameInput, academySloganInput, academyCourseInput].forEach(el => {
+[academyNameInput, academySloganInput, academyCourseInput, coverTitleInput].forEach(el => {
   if (el) {
     el.addEventListener('input', () => {
       saveAcademyPreferences();
@@ -466,7 +470,8 @@ if (downloadStudentPdfBtn) {
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
     const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
     const academyLogo = localStorage.getItem(logoKey) || '';
-    PdfExporter.triggerPrint('student', { subjectName, academyName, academyCourse, academyLogo });
+    const coverTitle = coverTitleInput ? coverTitleInput.value.trim() : '';
+    PdfExporter.triggerPrint('student', { subjectName, academyName, academyCourse, academyLogo, coverTitle });
   });
 }
 
@@ -478,7 +483,8 @@ if (downloadTeacherPdfBtn) {
     const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
     const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
     const academyLogo = localStorage.getItem(logoKey) || '';
-    PdfExporter.triggerPrint('teacher', { subjectName, academyName, academyCourse, academyLogo });
+    const coverTitle = coverTitleInput ? coverTitleInput.value.trim() : '';
+    PdfExporter.triggerPrint('teacher', { subjectName, academyName, academyCourse, academyLogo, coverTitle });
   });
 }
 

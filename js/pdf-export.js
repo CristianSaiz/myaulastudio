@@ -46,7 +46,7 @@ const PdfExporter = {
    * @param {string} [options.academyLogo] - Logotipo en Base64 o URL (opcional)
    * @returns {string} Fragmento HTML listo para inyectar
    */
-  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName, academyLogo } = {}) {
+  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName, academyLogo, coverTitle } = {}) {
     if (!includeCover) return '';
 
     const defaults = this.getDefaults();
@@ -56,6 +56,11 @@ const PdfExporter = {
     const lema = esc(academySlogan?.trim() || defaults.academySlogan);
     const curso = esc(academyCourse?.trim() || defaults.academyCourse);
     const materia = esc(subjectName?.trim() || 'Material Docente');
+
+    // Título personalizado del documento o valores por defecto
+    const customTitle = coverTitle ? esc(coverTitle.trim()) : '';
+    const tituloProfesor = customTitle || defaults.coverTitle || 'Ejercicios Resueltos';
+    const tituloAlumno = customTitle || 'Cuaderno de Ejercicios';
 
     // Recupera el logo de los parámetros o del almacenamiento local
     const logoKey = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STORAGE_KEYS?.academyLogo) 
@@ -77,8 +82,8 @@ const PdfExporter = {
       '<div class="cover-main">',
       '<p class="cover-kicker cover-kicker-profesor">Guía Didáctica · Solucionario Paso a Paso</p>',
       '<p class="cover-kicker cover-kicker-alumno">Cuaderno de Trabajo y Ejercicios</p>',
-      '<h1 class="cover-title cover-title-profesor">Ejercicios Resueltos</h1>',
-      '<h1 class="cover-title cover-title-alumno">Cuaderno de Ejercicios</h1>',
+      `<h1 class="cover-title cover-title-profesor">${tituloProfesor}</h1>`,
+      `<h1 class="cover-title cover-title-alumno">${tituloAlumno}</h1>`,
       `<p class="cover-subtitle">${materia}</p>`,
       '<div>',
       `  <span class="cover-tag">${curso}</span>`,
