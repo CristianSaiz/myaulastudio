@@ -45,9 +45,9 @@ const APP_CONFIG = {
 
   // Valores predeterminados para la portada editorial
   DEFAULTS: {
-    academyName: 'Mates, Amor y Magia',
-    academySlogan: 'Donde las matemáticas cobran sentido',
-    academyCourse: '2º Bachillerato · Ciencias',
+    academyName: 'Centro de Estudios',
+    academySlogan: 'Excelencia y rigor pedagógico',
+    academyCourse: '2º Bachillerato',
     coverTitle: 'Ejercicios Resueltos',
     provider: 'gemini',
     subject: 'math'

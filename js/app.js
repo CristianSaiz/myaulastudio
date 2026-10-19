@@ -48,7 +48,7 @@ const educationLevelSelect = document.getElementById('educationLevel');
 const LEVEL_COURSE_SUGGESTIONS = {
   primaria: 'Educación Primaria',
   eso: 'Secundaria (ESO)',
-  bachillerato: '2º Bachillerato · Ciencias',
+  bachillerato: '2º Bachillerato',
   universidad: 'Grado Universitario'
 };
 
@@ -339,6 +339,7 @@ function renderCurrentView() {
     academySlogan: academySloganInput?.value.trim(),
     academyCourse: academyCourseInput?.value.trim(),
     subjectName: subjectName,
+    subject: subjectSelect ? subjectSelect.value : 'math',
     academyLogo: savedLogo,
     coverTitle: coverTitleInput?.value.trim()
   });

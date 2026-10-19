@@ -46,22 +46,47 @@ const PdfExporter = {
    * @param {string} [options.academyLogo] - Logotipo en Base64 o URL (opcional)
    * @returns {string} Fragmento HTML listo para inyectar
    */
-  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName, academyLogo, coverTitle } = {}) {
+  generateCoverHtml({ includeCover = true, academyName, academySlogan, academyCourse, subjectName, subject, academyLogo, coverTitle } = {}) {
     if (!includeCover) return '';
 
     const defaults = this.getDefaults();
     const esc = this.escapeHtml;
 
+    // Detección automática del idioma inglés
+    const isEnglish = subject === 'english' || (subjectName && /ingl[eé]s|english/i.test(subjectName));
+
     const nombre = esc(academyName?.trim() || defaults.academyName);
-    const lema = esc(academySlogan?.trim() || defaults.academySlogan);
-    const curso = esc(academyCourse?.trim() || defaults.academyCourse);
-    const materia = esc(subjectName?.trim() || 'Material Docente');
 
-    // Título personalizado del documento o valores por defecto
+    // 1. Lema: si el usuario no escribió uno específico, adaptar al idioma
+    const defaultSlogan = isEnglish ? 'Excellence and rigor in education' : defaults.academySlogan;
+    const lema = esc(academySlogan?.trim() || defaultSlogan);
+
+    // 2. Curso: si es el valor por defecto y está en inglés, adaptar etiqueta
+    let cursoTexto = academyCourse?.trim() || defaults.academyCourse;
+    if (isEnglish && (!academyCourse || cursoTexto === defaults.academyCourse || cursoTexto === '2º Bachillerato · Ciencias')) {
+      cursoTexto = '2nd Baccalaureate';
+    }
+    const curso = esc(cursoTexto);
+
+    // 3. Nombre de la Asignatura en la portada
+    let materiaTexto = subjectName?.trim() || (isEnglish ? 'English' : 'Material Docente');
+    if (isEnglish && (materiaTexto.toLowerCase() === 'inglés' || materiaTexto.toLowerCase() === 'ingles')) {
+      materiaTexto = 'English';
+    }
+    const materia = esc(materiaTexto);
+
+    // 4. Títulos y etiquetas adaptados al idioma
     const customTitle = coverTitle ? esc(coverTitle.trim()) : '';
-    const tituloProfesor = customTitle || defaults.coverTitle || 'Ejercicios Resueltos';
-    const tituloAlumno = customTitle || 'Cuaderno de Ejercicios';
+    const tituloProfesor = customTitle || (isEnglish ? 'Solved Exercises' : (defaults.coverTitle || 'Ejercicios Resueltos'));
+    const tituloAlumno = customTitle || (isEnglish ? 'Exercise Booklet' : 'Cuaderno de Ejercicios');
 
+    const sloganTop = isEnglish ? 'STUDY MATERIAL' : 'MATERIAL DE ESTUDIO';
+    const kickerProfesor = isEnglish ? "Teacher's Guide · Step-by-Step Solutions" : 'Guía Didáctica · Solucionario Paso a Paso';
+    const kickerAlumno = isEnglish ? 'Student Practice Booklet &amp; Exercises' : 'Cuaderno de Trabajo y Ejercicios';
+    const tagProfesor = isEnglish ? '✓ ANSWER KEY INCLUDED' : '✓ CON SOLUCIONES';
+    const tagAlumno = isEnglish ? 'QUESTIONS ONLY' : 'ENUNCIADOS';
+    const noteBottom = isEnglish ? 'Educational Use' : 'Uso Docente';
+    
     // Recupera el logo de los parámetros o del almacenamiento local
     const logoKey = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STORAGE_KEYS?.academyLogo) 
       ? APP_CONFIG.STORAGE_KEYS.academyLogo 
@@ -77,23 +102,23 @@ const PdfExporter = {
       '<section class="portada not-prose">',
       '<div class="cover-top">',
       `  <div class="cover-brand" style="display: flex; align-items: center; gap: 12px;">${logoMarkup}<span>${nombre}</span></div>`,
-      '  <div class="cover-slogan-top">MATERIAL DE ESTUDIO</div>',
+      `  <div class="cover-slogan-top">${sloganTop}</div>`,
       '</div>',
       '<div class="cover-main">',
-      '<p class="cover-kicker cover-kicker-profesor">Guía Didáctica · Solucionario Paso a Paso</p>',
-      '<p class="cover-kicker cover-kicker-alumno">Cuaderno de Trabajo y Ejercicios</p>',
-      `<h1 class="cover-title cover-title-profesor">${tituloProfesor}</h1>`,
-      `<h1 class="cover-title cover-title-alumno">${tituloAlumno}</h1>`,
-      `<p class="cover-subtitle">${materia}</p>`,
-      '<div>',
-      `  <span class="cover-tag">${curso}</span>`,
-      '  <span class="cover-tag cover-tag-badge tag-profesor">✓ CON SOLUCIONES</span>',
-      '  <span class="cover-tag cover-tag-badge tag-alumno">ENUNCIADOS</span>',
-      '</div>',
+      `  <p class="cover-kicker cover-kicker-profesor">${kickerProfesor}</p>`,
+      `  <p class="cover-kicker cover-kicker-alumno">${kickerAlumno}</p>`,
+      `  <h1 class="cover-title cover-title-profesor">${tituloProfesor}</h1>`,
+      `  <h1 class="cover-title cover-title-alumno">${tituloAlumno}</h1>`,
+      `  <p class="cover-subtitle">${materia}</p>`,
+      '  <div>',
+      `    <span class="cover-tag">${curso}</span>`,
+      `    <span class="cover-tag cover-tag-badge tag-profesor">${tagProfesor}</span>`,
+      `    <span class="cover-tag cover-tag-badge tag-alumno">${tagAlumno}</span>`,
+      '  </div>',
       '</div>',
       '<div class="cover-bottom">',
-      `<em>${lema}</em>`,
-      '<span class="cover-note">Uso Docente</span>',
+      `  <em>${lema}</em>`,
+      `  <span class="cover-note">${noteBottom}</span>`,
       '</div>',
       '</section>'
     ].join('') + '\n\n';

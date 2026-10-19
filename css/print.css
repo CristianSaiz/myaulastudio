@@ -53,6 +53,7 @@ html, body {
    como `section:last-of-type` también casa con <section class="portada"> y,
    con mayor especificidad, anula sus reglas aunque sean !important. */
 body > header,
+footer,
 main > section:first-child,
 main > section:last-child > div:first-child,
 #newExerciseBtn,
