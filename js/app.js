@@ -500,12 +500,13 @@ window.addEventListener('paste', async (e) => {
     const filename = `Captura_${timestamp}.png`;
 
     try {
-      const base64 = await fileToBase64(file);
+      // Usamos el compresor oficial del proyecto
+      const processed = await processUploadedFile(file);
       uploadedFiles.push({
         name: filename,
-        mimeType: file.type || 'image/png',
-        base64: base64,
-        previewUrl: `data:${file.type || 'image/png'};base64,${base64}`
+        mimeType: processed.mimeType,
+        base64: processed.base64,
+        previewUrl: processed.previewUrl
       });
     } catch (err) {
       console.error('Error al procesar imagen del portapapeles:', err);

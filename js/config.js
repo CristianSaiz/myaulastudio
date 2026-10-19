@@ -36,7 +36,7 @@ const APP_CONFIG = {
   MODELS: {
     gemini: {
       flash: 'gemini-3.8-flash',
-      pro: 'gemini-3.1-pro'
+      pro: 'gemini-3.1-pro-preview'
     },
     openai: {
       standard: 'gpt-4o-mini'
