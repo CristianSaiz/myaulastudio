@@ -32,7 +32,6 @@ const MarkdownMathRenderer = {
     // 1. Proteger bloques display ($$...$$) para que marked.js no altere sus '\\'
     let protectedText = markdownText.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
       const id = `@@KATEX_DISPLAY_${mathBlocks.length}@@`;
-      // Limpieza: si la IA metió una viñeta (*, -, •) dentro de los $$
       const cleanFormula = formula.trim().replace(/^[\*\-•]\s*/, '');
       mathBlocks.push({ id, formula: cleanFormula, display: true });
       return `\n\n${id}\n\n`;
@@ -59,7 +58,15 @@ const MarkdownMathRenderer = {
             throwOnError: false,
             errorColor: '#cc0000'
           });
-          // Inserción segura sin usar regex para evitar conflictos con el símbolo $ html = html.split(item.id).join(renderedMath); return; } catch (e) { console.error('Error renderizando fórmula con KaTeX:', e); } }        // Fallback defensivo const delim = item.display ? '$$' : '$';
+          html = html.split(item.id).join(renderedMath);
+          return;
+        } catch (err) {
+          console.error('Error renderizando fórmula con KaTeX:', err);
+        }
+      }
+
+      // Fallback si KaTeX falla
+      const delim = item.display ? '$$' : '$';
       html = html.split(item.id).join(`${delim}${item.formula}${delim}`);
     });
 
