@@ -1,16 +1,16 @@
 // ==========================================================================
-// Motor de Renderizado Matemático y Markdown (Marked.js + KaTeX)
+// Motor de Renderizado Matemático y Markdown (Marked.js + KaTeX Blindado)
 // ==========================================================================
 
 const MarkdownMathRenderer = {
   /**
-   * Opciones de delimitadores para KaTeX auto-render
+   * Opciones de delimitadores para KaTeX
    */
   katexOptions: {
     delimiters: [
       { left: '$$', right: '$$', display: true },
       { left: '$', right: '$', display: false },
-      { left: '\\[', right: '\\]', display: true },
+      { left: '[', right: ']', display: true },
       { left: '\\(', right: '\\)', display: false }
     ],
     throwOnError: false,
@@ -19,23 +19,55 @@ const MarkdownMathRenderer = {
   },
 
   /**
-   * Transforma texto plano Markdown a HTML utilizando marked.js
+   * Transforma texto plano Markdown a HTML protegiendo las fórmulas LaTeX
+   * para evitar que marked.js se coma las barras invertidas de las matrices (\\\\).
    * @param {string} markdownText - Texto plano devuelto por la IA o el Mock.
-   * @returns {string} Código HTML resultante.
+   * @returns {string} Código HTML resultante con fórmulas compiladas.
    */
   parseMarkdown(markdownText) {
     if (!markdownText) return '';
-    if (typeof marked !== 'undefined' && marked.parse) {
-      return marked.parse(markdownText);
-    }
-    // Fallback básico en caso de fallo de carga de marked.js
-    return markdownText.replace(/\n/g, '<br>');
+
+    const mathBlocks = [];
+
+    // 1. Proteger bloques display ($$...$$) para que marked.js no altere sus '\\'
+    let protectedText = markdownText.replace(/\$\$([\s\S]*?)\$\$/g, (match, formula) => {
+      const id = `@@KATEX_DISPLAY_${mathBlocks.length}@@`;
+      // Limpieza: si la IA metió una viñeta (*, -, •) dentro de los $$
+      const cleanFormula = formula.trim().replace(/^[\*\-•]\s*/, '');
+      mathBlocks.push({ id, formula: cleanFormula, display: true });
+      return `\n\n${id}\n\n`;
+    });
+
+    // 2. Proteger fórmulas en línea ($...$)
+    protectedText = protectedText.replace(/\$([^\$\n]+?)\$/g, (match, formula) => {
+      const id = `@@KATEX_INLINE_${mathBlocks.length}@@`;
+      mathBlocks.push({ id, formula: formula.trim(), display: false });
+      return id;
+    });
+
+    // 3. Parsear el resto de la estructura Markdown a HTML
+    let html = (typeof marked !== 'undefined' && marked.parse)
+      ? marked.parse(protectedText)
+      : protectedText.replace(/\n/g, '<br>');
+
+    // 4. Renderizar las fórmulas directamente con KaTeX conservando los '\\' intactos
+    mathBlocks.forEach(item => {
+      if (typeof window.katex !== 'undefined' && window.katex.renderToString) {
+        try {
+          const renderedMath = window.katex.renderToString(item.formula, {
+            displayMode: item.display,
+            throwOnError: false,
+            errorColor: '#cc0000'
+          });
+          // Inserción segura sin usar regex para evitar conflictos con el símbolo $ html = html.split(item.id).join(renderedMath); return; } catch (e) { console.error('Error renderizando fórmula con KaTeX:', e); } }        // Fallback defensivo const delim = item.display ? '$$' : '$';
+      html = html.split(item.id).join(`${delim}${item.formula}${delim}`);
+    });
+
+    return html;
   },
 
   /**
-   * Ejecuta el análisis de KaTeX sobre un contenedor del DOM para convertir
-   * todas las fórmulas entre delimitadores ($y$$) en ecuaciones visuales.
-   * @param {HTMLElement} domElement - Elemento que contiene el HTML ya insertado.
+   * Ejecuta el análisis de KaTeX sobre un contenedor del DOM como respaldo adicional.
    */
   renderMath(domElement) {
     if (!domElement) return;
@@ -46,8 +78,6 @@ const MarkdownMathRenderer = {
       } catch (err) {
         console.error('Error durante el renderizado de KaTeX:', err);
       }
-    } else {
-      console.warn('KaTeX auto-render no está disponible en window.renderMathInElement.');
     }
   },
 
@@ -68,11 +98,9 @@ const MarkdownMathRenderer = {
       solucionesMd = parts.slice(1).join(splitToken);
     } else {
       // 2. Detección multilingüe por encabezados típicos de solución (## o ###)
-      // Cubre: Ejercicios Resueltos, Desarrollo, Soluciones, Detailed Solutions, Análisis Paso a Paso
       const regexSoluciones = /(?:^|\n)(?:#{2,3}\s*(?:✍️\s*)?(?:[0-9]+\.\s*)?(?:Ejercicios\s+Resueltos|Desarrollo|Soluci[oó]n(?:es)?|Detailed\s+Solutions|An[aá]lisis\s+Sint[aá]ctico|Resoluci[oó]n))/i;
       const match = rawMarkdown.match(regexSoluciones);
       if (match && match.index !== undefined) {
-        // El punto de corte es donde empieza el encabezado de soluciones
         const splitIndex = match.index + (match[0].startsWith('\n') ? 1 : 0);
         enunciadosMd = rawMarkdown.substring(0, splitIndex);
         solucionesMd = rawMarkdown.substring(splitIndex);
@@ -105,7 +133,7 @@ const MarkdownMathRenderer = {
       </div>
     `;
 
-    // Renderizamos las fórmulas de KaTeX
+    // Renderizamos las fórmulas de KaTeX residuales
     this.renderMath(container);
   }
 };
