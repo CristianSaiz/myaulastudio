@@ -212,7 +212,9 @@ function checkLicenseStatus(showAlert = false) {
   }
 
   // Caso 2: Es la licencia de prueba (Trial por 15 usos)
-  if (licenseKey === APP_CONFIG.DEMO_LICENSE_KEY) {
+  const isDemo = licenseKey.startsWith('DEMO-') || licenseKey.startsWith('TRIAL-');
+
+  if (isDemo) {
     const usageCount = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
     const maxUsage = APP_CONFIG.TRIAL_MAX_USAGE || 15;
     const usageLeft = Math.max(0, maxUsage - usageCount);
@@ -225,13 +227,11 @@ function checkLicenseStatus(showAlert = false) {
       }
       openLicenseModal();
       if (showAlert) {
-        alert('Has alcanzado el límite de 15 resoluciones de prueba. Introduce una clave de centro para continuar.');
+        alert('Has alcanzado el límite de 15 resoluciones de prueba de esta clave.');
       }
       return false;
     }
 
-    // Trial activo dentro de límites -> Cerrar modal y mostrar badge
-    closeLicenseModal();
     if (licenseBadge) {
       licenseBadge.classList.remove('hidden');
       licenseBadge.className = 'text-[10px] bg-emerald-500/80 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-md text-white font-medium cursor-pointer transition-colors';

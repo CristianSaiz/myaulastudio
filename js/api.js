@@ -94,12 +94,22 @@ const ApiClient = {
         });
       }
 
+      // 1. Si el Worker devuelve un error (ej: 401 Licencia no válida o 403 Límite agotado)
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('Licencia no válida o caducada. Por favor, revisa tu clave de acceso.');
+        let errorMsg = `Error en el servidor (${response.status})`;
+        try {
+          const errJson = await response.json();
+          errorMsg = errJson.error || errorMsg;
+        } catch (e) {
+          // Si no vino en formato JSON, se mantiene el mensaje genérico
         }
-        const errorText = await response.text();
-        throw new Error(`Error en la llamada a Gemini (${response.status}): ${errorText}`);
+        throw new Error(errorMsg);
+      }
+
+      // 2. Sincronizar el contador de usos devuelto por Cloudflare KV
+      const serverUsage = response.headers.get('x-usage-count');
+      if (serverUsage !== null) {
+        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount, serverUsage);
       }
 
       const data = await response.json();

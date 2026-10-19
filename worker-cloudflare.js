@@ -1,119 +1,132 @@
-/**
- * Cloudflare Worker: Proxy Seguro para Gemini API con Blindaje de Seguridad
- * 
- * Este worker actúa como un puente seguro entre el frontend y Google Gemini,
- * implementando validación de origen (CORS) y control de licencias.
- */
-
 export default {
   async fetch(request, env) {
-    // 1. Configuración de Orígenes Permitidos (CORS)
+    // 1. Orígenes autorizados (CORS estricto)
     const allowedOrigins = [
       'https://myaulastudio.vercel.app',
       'http://localhost:5500',
-      'http://127.0.0.1:5500'
+      'http://127.0.0.1:5500',
+      'http://localhost:8000',
+      'http://127.0.0.1:8000'
     ];
 
     const origin = request.headers.get('Origin');
     const isAllowedOrigin = allowedOrigins.includes(origin);
+    const corsOrigin = isAllowedOrigin ? origin : allowedOrigins[0];
 
-    // Manejo de Preflight OPTIONS
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': corsOrigin,
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, x-license-key',
+      'Access-Control-Expose-Headers': 'x-usage-count, x-usage-left',
+    };
+
+    // Preflight OPTIONS
     if (request.method === 'OPTIONS') {
-      if (isAllowedOrigin) {
-        return new Response(null, {
-          status: 204,
-          headers: {
-            'Access-Control-Allow-Origin': origin,
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, x-license-key',
-            'Access-Control-Max-Age': '86400',
-          },
-        });
-      }
-      return new Response(null, { status: 403 });
+      return new Response(null, { headers: corsHeaders });
     }
 
-    // 2. Validación de Origen para peticiones reales
-    if (!isAllowedOrigin) {
-      return new Response(JSON.stringify({ error: 'Acceso denegado: Origen no autorizado' }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json' }
+    if (request.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Método no permitido' }), {
+        status: 405,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // 3. Validación de Licencia
-    const licenseKey = request.headers.get('x-license-key');
-    const allowedLicenses = (env.ALLOWED_LICENSES || '').split(',').map(k => k.trim());
-    
-    const isValidLicense = 
-      (licenseKey && licenseKey.startsWith('DEMO-')) || 
-      (licenseKey && allowedLicenses.includes(licenseKey));
-
-    if (!isValidLicense) {
-      return new Response(JSON.stringify({ error: 'Licencia no autorizada' }), {
-        status: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': origin
-        }
-      });
-    }
-
-    // 4. Procesamiento de la petición a Gemini
     try {
-      if (request.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Método no permitido' }), {
-          status: 405,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': origin 
-          }
+      // 2. Validación de Licencia
+      const licenseKey = request.headers.get('x-license-key')?.trim();
+
+      if (!licenseKey) {
+        return new Response(JSON.stringify({ error: 'Licencia requerida. Introduce una clave autorizada.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      const body = await request.json();
-      const { model, geminiData } = body;
+      // Licencias VIP / Mensuales autorizadas en variables de Cloudflare
+      const allowedLicenses = (env.ALLOWED_LICENSES || '')
+        .split(',')
+        .map(k => k.trim())
+        .filter(Boolean);
 
-      if (!model || !geminiData) {
-        return new Response(JSON.stringify({ error: 'Datos de petición incompletos' }), {
-          status: 400,
-          headers: { 
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': origin 
-          }
+      const isVipLicense = allowedLicenses.includes(licenseKey);
+      const isDemoLicense = licenseKey.startsWith('DEMO-') || licenseKey.startsWith('TRIAL-');
+
+      if (!isVipLicense && !isDemoLicense) {
+        return new Response(JSON.stringify({ error: 'Licencia no válida o no registrada.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Reenvío seguro a Gemini usando la API KEY de entorno (secreta)
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
+      // 3. Control de cuota en Cloudflare KV (solo aplica a claves Demo)
+      let currentUsage = 0;
+      const MAX_TRIAL_USAGE = 15;
 
-      const geminiResponse = await fetch(geminiUrl, {
+      if (!isVipLicense && isDemoLicense) {
+        if (env.LICENCIAS_KV) {
+          const storedUsage = await env.LICENCIAS_KV.get(licenseKey);
+          currentUsage = storedUsage ? parseInt(storedUsage, 10) : 0;
+
+          if (currentUsage >= MAX_TRIAL_USAGE) {
+            return new Response(JSON.stringify({ 
+              error: `Has alcanzado el límite de ${MAX_TRIAL_USAGE} resoluciones de prueba de esta clave. Contacta por WhatsApp para activar tu plan mensual.` 
+            }), {
+              status: 403,
+              headers: { 
+                ...corsHeaders, 
+                'Content-Type': 'application/json',
+                'x-usage-count': String(currentUsage),
+                'x-usage-left': '0'
+              }
+            });
+          }
+        }
+      }
+
+      // 4. Llamada a Google Gemini
+      const payload = await request.json();
+      const model = payload.model || 'gemini-2.5-flash';
+
+      if (!env.GEMINI_API_KEY) {
+        return new Response(JSON.stringify({ error: 'La variable GEMINI_API_KEY no está configurada en Cloudflare.' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
+
+      const geminiResponse = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(geminiData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload.geminiData)
       });
 
-      const data = await geminiResponse.json();
+      const responseData = await geminiResponse.text();
 
-      // Devolvemos la respuesta al frontend manteniendo el aislamiento
-      return new Response(JSON.stringify(data), {
+      // 5. Incrementar contador en KV si la resolución tuvo éxito
+      if (geminiResponse.ok && !isVipLicense && isDemoLicense && env.LICENCIAS_KV) {
+        currentUsage += 1;
+        await env.LICENCIAS_KV.put(licenseKey, String(currentUsage));
+      }
+
+      const usageLeft = Math.max(0, MAX_TRIAL_USAGE - currentUsage);
+
+      return new Response(responseData, {
         status: geminiResponse.status,
         headers: {
+          ...corsHeaders,
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': origin
+          'x-usage-count': String(currentUsage),
+          'x-usage-left': String(usageLeft)
         }
       });
 
-    } catch (error) {
-      // Manejo de errores sin exponer detalles técnicos o credenciales
-      return new Response(JSON.stringify({ error: 'Error interno en el servidor de enlace' }), {
+    } catch (err) {
+      return new Response(JSON.stringify({ error: err.message || 'Error interno del servidor proxy.' }), {
         status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': origin
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
   }
