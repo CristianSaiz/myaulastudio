@@ -94,15 +94,26 @@ const ApiClient = {
         });
       }
 
-      // 1. Si el Worker devuelve un error (ej: 401 Licencia no válida o 403 Límite agotado)
+      // 1. Si el Worker devuelve un error (ej: 401, 403, 503)
       if (!response.ok) {
         let errorMsg = `Error en el servidor (${response.status})`;
         try {
           const errJson = await response.json();
-          errorMsg = errJson.error || errorMsg;
+          if (errJson && errJson.error) {
+            // Si el error es un objeto de Google ({ message: "..." }), extraemos su texto
+            errorMsg = (typeof errJson.error === 'object')
+              ? (errJson.error.message || JSON.stringify(errJson.error))
+              : errJson.error;
+          }
         } catch (e) {
           // Si no vino en formato JSON, se mantiene el mensaje genérico
         }
+
+        // Si es una sobrecarga temporal de Google, dar mensaje amigable
+        if (response.status === 503 || errorMsg.includes('overloaded')) {
+          errorMsg = 'Los servidores de Google Gemini están momentáneamente saturados. Por favor, pulsa "Resolver Ejercicio" de nuevo en unos segundos.';
+        }
+
         throw new Error(errorMsg);
       }
 

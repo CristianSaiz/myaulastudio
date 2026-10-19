@@ -137,11 +137,22 @@ export default {
 
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
 
-      const geminiResponse = await fetch(url, {
+      // Llamada a Google Gemini con reintento automático si hay sobrecarga (503)
+      let geminiResponse = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(geminiBody)
       });
+
+      // Si Google devuelve 503 (servidor ocupado), esperamos 1 segundo y reintentamos
+      if (geminiResponse.status === 503) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        geminiResponse = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiBody)
+        });
+      }
 
       const responseData = await geminiResponse.text();
 
