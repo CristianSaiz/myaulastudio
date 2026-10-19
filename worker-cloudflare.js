@@ -86,7 +86,7 @@ export default {
 
       // 4. Llamada a Google Gemini
       const payload = await request.json();
-      const model = payload.model || 'gemini-2.5-flash';
+      const model = payload.model || 'gemini-3.8-flash';
 
       if (!env.GEMINI_API_KEY) {
         return new Response(JSON.stringify({ error: 'La variable GEMINI_API_KEY no está configurada en Cloudflare.' }), {
@@ -95,12 +95,24 @@ export default {
         });
       }
 
+      // Inyectar control de pensamiento según el modelo para evitar tiempos de espera > 100s
+      const geminiBody = {
+        ...payload.geminiData,
+        generationConfig: {
+          temperature: 0.2,
+          // thinkingLevel "low" para Gemini 3.x Flash; thinkingBudget para 2.5
+          thinkingConfig: model.startsWith('gemini-3') 
+            ? { thinkingLevel: 'low' } 
+            : { thinkingBudget: 1024 }
+        }
+      };
+
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`;
 
       const geminiResponse = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload.geminiData)
+        body: JSON.stringify(geminiBody)
       });
 
       const responseData = await geminiResponse.text();

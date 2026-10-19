@@ -393,6 +393,56 @@ if (imageInput) {
   });
 }
 
+// Captura global de imágenes pegadas desde el portapapeles (Ctrl + V / Cmd + V)
+window.addEventListener('paste', async (e) => {
+  if (!e.clipboardData || !e.clipboardData.items) return;
+
+  const items = Array.from(e.clipboardData.items);
+  const imageItems = items.filter(item => item.type && item.type.startsWith('image/'));
+
+  // Si no se está pegando ninguna imagen (ej: es texto para el problema), dejamos actuar al navegador
+  if (imageItems.length === 0) return;
+
+  const availableSlots = APP_CONFIG.MAX_FILES - uploadedFiles.length;
+
+  if (availableSlots <= 0) {
+    alert(`Has alcanzado el límite máximo de ${APP_CONFIG.MAX_FILES} archivos.`);
+    e.preventDefault();
+    return;
+  }
+
+  // Prevenimos comportamiento por defecto para no volcar datos binarios en inputs de texto
+  e.preventDefault();
+
+  if (imageItems.length > availableSlots) {
+    alert(`Solo puedes añadir ${availableSlots} imagen(es) más. Límite: ${APP_CONFIG.MAX_FILES}.`);
+  }
+
+  const itemsToProcess = imageItems.slice(0, availableSlots);
+
+  for (const item of itemsToProcess) {
+    const file = item.getAsFile();
+    if (!file) continue;
+
+    const timestamp = new Date().toLocaleTimeString('es-ES', { hour12: false }).replace(/:/g, '');
+    const filename = `Captura_${timestamp}.png`;
+
+    try {
+      const base64 = await fileToBase64(file);
+      uploadedFiles.push({
+        name: filename,
+        mimeType: file.type || 'image/png',
+        base64: base64,
+        previewUrl: `data:${file.type || 'image/png'};base64,${base64}`
+      });
+    } catch (err) {
+      console.error('Error al procesar imagen del portapapeles:', err);
+    }
+  }
+
+  updateFileListUI();
+});
+
 // Selector de velocidad Flash / Pro
 modeRadios.forEach(radio => {
   radio.addEventListener('change', (e) => {
