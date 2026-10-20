@@ -47,9 +47,10 @@ const MarkdownMathRenderer = {
       ? marked.parse(protectedText)
       : protectedText.replace(/\n/g, '<br>');
 
+    // Desinfección estricta (Fail-closed si DOMPurify no estuviera cargado)
     let html = (typeof DOMPurify !== 'undefined' && DOMPurify.sanitize)
       ? DOMPurify.sanitize(rawHtml)
-      : rawHtml;
+      : PdfExporter.escapeHtml(rawHtml);
 
     // 4. Renderizar las fórmulas directamente con KaTeX conservando los '\\' intactos
     mathBlocks.forEach(item => {
@@ -58,7 +59,8 @@ const MarkdownMathRenderer = {
           const renderedMath = window.katex.renderToString(item.formula, {
             displayMode: item.display,
             throwOnError: false,
-            errorColor: '#cc0000'
+            errorColor: '#cc0000',
+            trust: false // Impedir comandos HTML/macros inseguras en LaTeX
           });
           html = html.split(item.id).join(renderedMath);
           return;
@@ -67,9 +69,10 @@ const MarkdownMathRenderer = {
         }
       }
 
-      // Fallback si KaTeX falla
+      // Fallback seguro: sanitizar/escapar HTML para evitar XSS post-DOMPurify
       const delim = item.display ? '$$' : '$';
-      html = html.split(item.id).join(`${delim}${item.formula}${delim}`);
+      const safeFormula = PdfExporter.escapeHtml(item.formula);
+      html = html.split(item.id).join(`${delim}${safeFormula}${delim}`);
     });
 
     return html;

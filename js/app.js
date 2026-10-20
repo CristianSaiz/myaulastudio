@@ -18,6 +18,7 @@ const newExerciseBtn = document.getElementById('newExerciseBtn');
 const licenseModal = document.getElementById('licenseModal');
 const licenseInput = document.getElementById('licenseInput');
 const activateLicenseBtn = document.getElementById('activateLicenseBtn');
+const logoutLicenseBtn = document.getElementById('logoutLicenseBtn');
 const licenseError = document.getElementById('licenseError');
 const licenseBadge = document.getElementById('licenseBadge');
 
@@ -603,6 +604,17 @@ if (activateLicenseBtn) {
     }
 
     localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, key);
+    closeLicenseModal();
+    checkLicenseStatus();
+  });
+}
+
+// Desvincular licencia de este navegador
+if (logoutLicenseBtn) {
+  logoutLicenseBtn.addEventListener('click', () => {
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
+    localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount);
+    if (licenseInput) licenseInput.value = '';
     closeLicenseModal();
     checkLicenseStatus();
   });

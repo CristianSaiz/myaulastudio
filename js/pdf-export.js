@@ -91,11 +91,14 @@ const PdfExporter = {
     const logoKey = (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.STORAGE_KEYS?.academyLogo) 
       ? APP_CONFIG.STORAGE_KEYS.academyLogo 
       : 'myaulastudio_academy_logo';
-    const logoSrc = academyLogo || (typeof localStorage !== 'undefined' ? localStorage.getItem(logoKey) : '') || '';
+    const rawLogo = (academyLogo || (typeof localStorage !== 'undefined' ? localStorage.getItem(logoKey) : '') || '').trim();
 
-    // Si hay logo, renderiza una etiqueta img maquetada; de lo contrario, muestra el icono escolar tradicional
-    const logoMarkup = logoSrc
-      ? `<img src="${logoSrc}" alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,0.95); padding: 4px; display: inline-block; vertical-align: middle;">`
+    // Validación estricta de Data URI para impedir inyecciones javascript: o URLs remotas
+    const isValidDataImage = /^data:image\/(png|jpeg|jpg|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(rawLogo);
+    const safeLogoSrc = isValidDataImage ? esc(rawLogo) : '';
+
+    const logoMarkup = safeLogoSrc
+      ? `<img src="${safeLogoSrc}" alt="Logo" style="max-height: 48px; max-width: 120px; object-fit: contain; border-radius: 6px; background: rgba(255,255,255,0.95); padding: 4px; display: inline-block; vertical-align: middle;">`
       : `<span style="font-size: 28px; line-height: 1; display: inline-block; vertical-align: middle;">🏫</span>`;
 
     return [
