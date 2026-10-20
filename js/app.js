@@ -18,7 +18,6 @@ const newExerciseBtn = document.getElementById('newExerciseBtn');
 const licenseModal = document.getElementById('licenseModal');
 const licenseInput = document.getElementById('licenseInput');
 const activateLicenseBtn = document.getElementById('activateLicenseBtn');
-const logoutLicenseBtn = document.getElementById('logoutLicenseBtn');
 const licenseError = document.getElementById('licenseError');
 const licenseBadge = document.getElementById('licenseBadge');
 
@@ -185,15 +184,21 @@ function updateFileListUI() {
     const info = document.createElement('div');
     info.className = 'flex items-center gap-2 overflow-hidden flex-1';
 
+    // Blindaje contra inyecciones XSS en el nombre y vista previa del archivo
+    const safeName = PdfExporter.escapeHtml(file.name);
+
     if (file.mimeType === 'application/pdf') {
       info.innerHTML = `
         <span class="w-8 h-8 bg-red-100 text-red-600 font-bold rounded flex items-center justify-center text-xs shrink-0">PDF</span>
-        <span class="text-xs text-slate-700 truncate font-medium" title="${file.name}">${file.name}</span>
+        <span class="text-xs text-slate-700 truncate font-medium" title="${safeName}">${safeName}</span>
       `;
     } else {
+      const safePreview = (file.previewUrl && file.previewUrl.startsWith('data:image/'))
+        ? PdfExporter.escapeHtml(file.previewUrl)
+        : '';
       info.innerHTML = `
-        <img src="${file.previewUrl}" class="w-8 h-8 rounded object-cover border border-slate-200 shrink-0" alt="Vista previa">
-        <span class="text-xs text-slate-700 truncate font-medium" title="${file.name}">${file.name}</span>
+        <img src="${safePreview}" class="w-8 h-8 rounded object-cover border border-slate-200 shrink-0" alt="Vista previa">
+        <span class="text-xs text-slate-700 truncate font-medium" title="${safeName}">${safeName}</span>
       `;
     }
 
@@ -609,12 +614,18 @@ if (activateLicenseBtn) {
   });
 }
 
-// Desvincular licencia de este navegador
+// Botón Cerrar sesión / Desvincular Licencia
+const logoutLicenseBtn = document.getElementById('logoutLicenseBtn');
 if (logoutLicenseBtn) {
   logoutLicenseBtn.addEventListener('click', () => {
+    // 1. Borra la licencia y los usos de este ordenador
     localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
     localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount);
+    
+    // 2. Limpia el campo de texto
     if (licenseInput) licenseInput.value = '';
+    
+    // 3. Cierra el modal y actualiza el distintivo
     closeLicenseModal();
     checkLicenseStatus();
   });
@@ -744,10 +755,15 @@ if (resolveBtn) {
 
     } catch (error) {
       console.error('Error al resolver ejercicio:', error);
+      // Saneamiento de error.message con PdfExporter.escapeHtml para mitigar DOM XSS
+      const safeErrorMsg = (typeof PdfExporter !== 'undefined' && PdfExporter.escapeHtml)
+        ? PdfExporter.escapeHtml(error.message || 'Error desconocido.')
+        : (error.message || 'Error desconocido.');
+
       solutionContainer.innerHTML = `
         <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
           <strong>Error al generar la resolución:</strong>
-          <p class="mt-1">${error.message}</p>
+          <p class="mt-1">${safeErrorMsg}</p>
         </div>
       `;
     } finally {
