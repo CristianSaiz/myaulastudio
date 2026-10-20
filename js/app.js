@@ -57,12 +57,18 @@ const LEVEL_COURSE_SUGGESTIONS = {
 // --------------------------------------------------------------------------
 let uploadedFiles = [];          // [{ name, mimeType, base64, previewUrl }]
 let lastResolvedMarkdown = sessionStorage.getItem('myaulastudio_last_solution') || null;
+let currentAbortController = null;
 
 /**
  * Valida si el botón "Resolver" debe habilitarse según el contenido.
  */
 function updateResolveButtonState() {
   if (!resolveBtn) return;
+  // Si hay una resolución en vuelo, el botón DEBE permanecer bloqueado
+  if (currentAbortController) {
+    resolveBtn.disabled = true;
+    return;
+  }
   const hasText = problemInput && problemInput.value.trim().length > 0;
   const hasFiles = uploadedFiles.length > 0;
   
@@ -672,6 +678,9 @@ if (removeLogoBtn) {
 // --------------------------------------------------------------------------
 if (resolveBtn) {
   resolveBtn.addEventListener('click', async () => {
+    // Si ya hay una resolución en marcha, ignoramos cualquier clic secundario
+    if (currentAbortController) return;
+
     if (!checkLicenseStatus(true)) return;
 
     const subject = subjectSelect ? subjectSelect.value : 'math';
@@ -683,10 +692,22 @@ if (resolveBtn) {
       return;
     }
 
-    // Feedback visual de carga con cronómetro en tiempo real
+    // 1. Instanciamos el AbortController para esta petición
+    currentAbortController = new AbortController();
+
+    // 2. Bloqueo visual e interactivo inmediato del botón
     resolveBtn.disabled = true;
+    const originalBtnText = resolveBtn.innerHTML;
+    resolveBtn.innerHTML = `
+      <div class="flex items-center justify-center gap-2">
+        <span class="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+        <span>Resolviendo...</span>
+      </div>
+    `;
+
     if (downloadStudentPdfBtn) downloadStudentPdfBtn.classList.add('hidden');
     if (downloadTeacherPdfBtn) downloadTeacherPdfBtn.classList.add('hidden');
+    if (newExerciseBtn) newExerciseBtn.classList.add('hidden');
 
     const loaderSubtext = APP_CONFIG.MOCK_MODE
       ? '🔧 Modo Simulación (Coste 0) activado...'
@@ -694,6 +715,7 @@ if (resolveBtn) {
         ? 'Razonando paso a paso con rigor analítico profundo...'
         : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
 
+    // 3. UI de carga con temporizador y BOTÓN DE CANCELAR
     solutionContainer.innerHTML = `
       <div class="flex flex-col items-center justify-center h-80 gap-3 text-indigo-600">
         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
@@ -703,8 +725,26 @@ if (resolveBtn) {
           <span id="loadingTimer" class="text-xs font-mono font-bold text-indigo-700">Tiempo: 0 s</span>
         </div>
         <p class="text-xs text-slate-400">Procesando ${uploadedFiles.length > 0 ? uploadedFiles.length + ' archivo(s)' : 'texto'}</p>
+        
+        <!-- Botón para cancelar la petición en vuelo -->
+        <button 
+          id="cancelResolveBtn" 
+          type="button" 
+          class="mt-2 text-xs font-semibold px-3.5 py-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 hover:border-red-300 rounded-lg shadow-xs transition-colors flex items-center gap-1.5">
+          <span>🛑</span> Cancelar resolución
+        </button>
       </div>
     `;
+
+    // Conectar el botón de cancelación
+    const cancelResolveBtn = document.getElementById('cancelResolveBtn');
+    if (cancelResolveBtn) {
+      cancelResolveBtn.addEventListener('click', () => {
+        if (currentAbortController) {
+          currentAbortController.abort();
+        }
+      });
+    }
 
     // Cronómetro en vivo
     let elapsedSeconds = 0;
@@ -720,7 +760,7 @@ if (resolveBtn) {
       const level = educationLevelSelect ? educationLevelSelect.value : 'bachillerato';
       const systemPrompt = getSystemPrompt(subject, level);
 
-      // Petición a la API (o Mock según MOCK_MODE)
+      // Petición a la API con la señal de cancelación
       const rawMarkdown = await ApiClient.resolveExercise({
         provider: 'gemini',
         apiKey: '',
@@ -728,17 +768,18 @@ if (resolveBtn) {
         userMessage: problem,
         files: uploadedFiles,
         engineMode,
-        subject
+        subject,
+        signal: currentAbortController.signal // <-- Pasamos el signal
       });
 
-      // Guardamos en memoria y sessionStorage para sobrevivir a descargas de PDF
+      // Guardamos en memoria y en sessionStorage
       lastResolvedMarkdown = rawMarkdown;
       sessionStorage.setItem('myaulastudio_last_solution', rawMarkdown);
 
       // Renderizamos la vista combinada
       renderCurrentView();
 
-      // Si está en MOCK_MODE, simula el descuento localmente para desarrollo
+      // Si está en MOCK_MODE, simula el descuento localmente
       if (APP_CONFIG.MOCK_MODE) {
         const currentKey = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.licenseKey);
         const isDemo = currentKey && (currentKey.startsWith('DEMO-') || currentKey.startsWith('TRIAL-'));
@@ -748,7 +789,7 @@ if (resolveBtn) {
         }
       }
 
-      // Refresca el estado de la licencia y el contador (sincronizado con KV desde api.js)
+      // Refresca el estado de la licencia y el contador
       checkLicenseStatus();
 
       // Limpieza automática de fotos/PDFs adjuntos tras resolver
@@ -756,8 +797,14 @@ if (resolveBtn) {
       updateFileListUI();
 
     } catch (error) {
+      // Si el usuario canceló deliberadamente, no mostramos un error rojo
+      if (error.name === 'AbortError') {
+        console.info('Resolución cancelada por el usuario.');
+        renderCurrentView();
+        return;
+      }
+
       console.error('Error al resolver ejercicio:', error);
-      // Saneamiento de error.message con PdfExporter.escapeHtml para mitigar DOM XSS
       const safeErrorMsg = (typeof PdfExporter !== 'undefined' && PdfExporter.escapeHtml)
         ? PdfExporter.escapeHtml(error.message || 'Error desconocido.')
         : (error.message || 'Error desconocido.');
@@ -770,6 +817,8 @@ if (resolveBtn) {
       `;
     } finally {
       clearInterval(intervalTimer);
+      currentAbortController = null;
+      resolveBtn.innerHTML = originalBtnText || 'Resolver Ejercicio';
       updateResolveButtonState();
     }
   });

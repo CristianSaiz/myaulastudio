@@ -22,14 +22,23 @@ const ApiClient = {
     userMessage,
     files = [],
     engineMode = 'flash',
-    subject = 'math'
+    subject = 'math',
+    signal = null // <-- Parámetro de cancelación
   }) {
     // ----------------------------------------------------------------------
     // 1. MODO SIMULACIÓN (Coste Cero / Sin consumo de red)
     // ----------------------------------------------------------------------
     if (APP_CONFIG.MOCK_MODE) {
       console.info(`[MOCK_MODE] Respuesta simulada para: ${subject} (${engineMode})`);
-      await new Promise(resolve => setTimeout(resolve, APP_CONFIG.MOCK_DELAY_MS));
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, APP_CONFIG.MOCK_DELAY_MS);
+        if (signal) {
+          signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('Resolución cancelada por el usuario.', 'AbortError'));
+          });
+        }
+      });
       return getMockResponse(subject);
     }
 
@@ -74,7 +83,8 @@ const ApiClient = {
             'Content-Type': 'application/json',
             'x-goog-api-key': apiKey.trim()
           },
-          body: JSON.stringify(geminiData)
+          body: JSON.stringify(geminiData),
+          signal: signal || undefined // <-- Soporte AbortSignal
         });
       } else {
         // --- RUTA B: PROXY SEGURO EN CLOUDFLARE WORKER (Clave centralizada en backend) ---
@@ -93,7 +103,8 @@ const ApiClient = {
           body: JSON.stringify({
             model: modelId,
             geminiData: geminiData
-          })
+          }),
+          signal: signal || undefined // <-- Soporte AbortSignal
         });
       }
 
@@ -171,7 +182,8 @@ const ApiClient = {
             { role: 'user', content: content }
           ],
           temperature: 0.2
-        })
+        }),
+        signal: signal || undefined // <-- Soporte AbortSignal
       });
 
       const data = await response.json();
