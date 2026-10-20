@@ -128,28 +128,37 @@ const PdfExporter = {
   },
 
   /**
-   * Genera el nombre del archivo normalizado:
-   * Nombre_Centro_Asignatura_Curso_Tipo.pdf
+   * Genera el nombre del archivo normalizado priorizando el tema/título:
+   * TituloTema_Tipo_Asignatura_Centro.pdf
    */
-  buildFileName({ academyName = '', subjectName = '', academyCourse = '', type = 'Soluciones' } = {}) {
+  buildFileName({ coverTitle = '', type = 'Soluciones', subjectName = '', academyCourse = '', academyName = '' } = {}) {
     const sanitize = (str) =>
       String(str ?? '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '') // Elimina tildes
-        .replace(/[^a-zA-Z0-9]/g, '_')   // Sustituye espacios y símbolos por guiones bajos
-        .replace(/_+/g, '_')             // Evita guiones dobles
-        .replace(/^_|_$/g, '');          // Limpia guiones al inicio o final
+        .replace(/[^a-zA-Z0-9]/g, '_')   // Sustituye espacios y caracteres raros por guiones bajos
+        .replace(/_+/g, '_')             // Evita guiones bajos repetidos
+        .replace(/^_|_$/g, '');          // Limpia guiones al inicio y final
 
-    const centro = sanitize(academyName) || 'Centro';
-    const asignatura = sanitize(subjectName) || 'Asignatura';
-    const curso = sanitize(academyCourse) || 'Curso';
-    const sufijo = sanitize(type);
+    const tema = sanitize(coverTitle);
+    const sufijoTipo = sanitize(type);
+    const asignatura = sanitize(subjectName);
+    const curso = sanitize(academyCourse);
+    const centro = sanitize(academyName);
 
-    return `${centro}_${asignatura}_${curso}_${sufijo}`;
+    // Si el docente puso un título específico (ej: "Junio 2016 Matrices"), va en primer lugar
+    if (tema) {
+      return `${tema}_${sufijoTipo}${curso ? '_' + curso : ''}`;
+    }
+
+    // Fallback si no hay título personalizado: Asignatura_Tipo_Curso_Centro
+    const bloquePrincipal = asignatura || 'Ejercicios';
+    return `${bloquePrincipal}_${sufijoTipo}${curso ? '_' + curso : ''}${centro ? '_' + centro : ''}`;
   },
 
   /**
-   * Dispara el diálogo de impresión nativo configurando el título sugerido para el PDF.
+   * Dispara el diálogo de impresión nativo configurando el título sugerido para el PDF
+   * y los metadatos legibles para las pestañas del navegador.
    */
   triggerPrint(mode = 'teacher', meta = {}) {
     const originalTitle = document.title;
@@ -162,16 +171,28 @@ const PdfExporter = {
       document.body.classList.remove('mode-student-print');
     }
 
-    // 2. Construir el nombre exacto del archivo
+    // 2. Determinar tipo y texto legible
     const tipo = isStudent ? 'Enunciados' : 'Soluciones';
-    document.title = this.buildFileName({
-      academyName: meta.academyName,
-      subjectName: meta.subjectName,
-      academyCourse: meta.academyCourse,
-      type: tipo
-    });
+    const cleanCoverTitle = (meta.coverTitle || '').trim();
+    const cleanSubject = (meta.subjectName || '').trim();
+    const cleanAcademy = (meta.academyName || '').trim();
 
-    // 3. Limpieza al terminar o cancelar la impresión
+    // 3. Título del documento (metadato que leerá la pestaña del visor PDF)
+    // Formato: "Junio 2016 Matrices · Soluciones | Centro de Estudios"
+    const displayHeader = cleanCoverTitle || `${cleanSubject || 'Ejercicios'} (${tipo})`;
+    const subHeader = cleanCoverTitle ? ` · ${tipo}` : '';
+    const centerHeader = cleanAcademy ? ` | ${cleanAcademy}` : '';
+
+    // document.title define tanto el nombre sugerido al guardar como el título de la pestaña
+    document.title = `${this.buildFileName({
+      coverTitle: cleanCoverTitle,
+      type: tipo,
+      subjectName: cleanSubject,
+      academyCourse: meta.academyCourse,
+      academyName: cleanAcademy
+    })}`;
+
+    // 4. Limpieza al terminar o cancelar la impresión
     const cleanup = () => {
       document.body.classList.remove('mode-student-print');
       document.title = originalTitle;
@@ -183,7 +204,7 @@ const PdfExporter = {
     try {
       window.print();
     } finally {
-      setTimeout(cleanup, 400);
+      setTimeout(cleanup, 500);
     }
   },
 
