@@ -127,85 +127,156 @@ const PdfExporter = {
     ].join('') + '\n\n';
   },
 
+  // ========================================================================
+  // TÍTULO DEL DOCUMENTO (/Title del PDF) Y SESIÓN DE IMPRESIÓN
+  // ========================================================================
+
+  _printSession: null,      // { mode, title, originalTitle, printReturned, afterprintSeen, external }
+  _eventsBound: false,
+  _metaProvider: null,
+
   /**
-   * Genera el nombre del archivo normalizado priorizando el tema/título:
-   * TituloTema_Tipo_Asignatura_Centro.pdf
+   * Registra una función que devuelve los datos actuales del formulario
+   * ({ subjectName, coverTitle, ... }). Se usa cuando la impresión NO
+   * la lanzan nuestros botones (Ctrl+P, menú del navegador).
    */
-  buildFileName({ coverTitle = '', type = 'Soluciones', subjectName = '', academyCourse = '', academyName = '' } = {}) {
-    const sanitize = (str) =>
-      String(str ?? '')
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '') // Elimina tildes
-        .replace(/[^a-zA-Z0-9]/g, '_')   // Sustituye espacios y caracteres raros por guiones bajos
-        .replace(/_+/g, '_')             // Evita guiones bajos repetidos
-        .replace(/^_|_$/g, '');          // Limpia guiones al inicio y final
+  setMetaProvider(fn) {
+    this._metaProvider = typeof fn === 'function' ? fn : null;
+    this._bindPrintEvents();
+  },
 
-    const tema = sanitize(coverTitle);
-    const sufijoTipo = sanitize(type);
-    const asignatura = sanitize(subjectName);
-    const curso = sanitize(academyCourse);
-    const centro = sanitize(academyName);
-
-    // Si el docente puso un título específico (ej: "Junio 2016 Matrices"), va en primer lugar
-    if (tema) {
-      return `${tema}_${sufijoTipo}${curso ? '_' + curso : ''}`;
+  /** Combina proveedor + meta explícita; el título personalizado se lee del DOM si falta. */
+  resolveMeta(meta = {}) {
+    let fromProvider = {};
+    try { fromProvider = (this._metaProvider && this._metaProvider()) || {}; } catch (_) { /* noop */ }
+    const merged = { ...fromProvider, ...meta };
+    if (merged.coverTitle === undefined || merged.coverTitle === null) {
+      merged.coverTitle = document.getElementById('coverTitle')?.value || '';
     }
-
-    // Fallback si no hay título personalizado: Asignatura_Tipo_Curso_Centro
-    const bloquePrincipal = asignatura || 'Ejercicios';
-    return `${bloquePrincipal}_${sufijoTipo}${curso ? '_' + curso : ''}${centro ? '_' + centro : ''}`;
+    return merged;
   },
 
   /**
-   * Dispara el diálogo de impresión nativo configurando el título sugerido para el PDF
-   * y los metadatos legibles para las pestañas del navegador.
+   * Genera el título/nombre de archivo.
+   *   Con tema:  "Junio 2016 - Soluciones"  /  "Junio 2016 - Enunciados"
+   *   Sin tema:  "Matemáticas - Soluciones" /  "Ejercicios - Soluciones"
+   * Conserva tildes y ñ (el /Title del PDF es Unicode); solo elimina los
+   * caracteres prohibidos en nombres de archivo y los de control.
+   */
+  buildFileName({ coverTitle = '', type = 'Soluciones', subjectName = '' } = {}) {
+    const clean = (str) =>
+      String(str ?? '')
+        .replace(/[\u0000-\u001f\u007f]/g, '')
+        .replace(/[\\/:*?"<>|]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const base = clean(coverTitle) || clean(subjectName) || 'Ejercicios';
+    return `${base} - ${clean(type)}`;
+  },
+
+  _applyPrintState(session) {
+    document.title = session.title;
+    document.body.classList.toggle('mode-student-print', session.mode === 'student');
+  },
+
+  _endSession(session) {
+    if (this._printSession !== session) return;
+    document.body.classList.remove('mode-student-print');
+    document.title = session.originalTitle;
+    this._printSession = null;
+  },
+
+  /**
+   * Una sesión termina cuando el navegador ya no va a volver a renderizar:
+   *  - Impresión lanzada por la app: cuando window.print() ha vuelto Y se ha visto afterprint
+   *    (Chromium: print() bloquea hasta cerrar el diálogo y afterprint puede llegar ANTES;
+   *     Firefox: print() vuelve al instante y afterprint llega al cerrar).
+   *  - Impresión externa (Ctrl+P): en afterprint; si el usuario cambia ajustes en la
+   *    vista previa, beforeprint vuelve a crear la sesión.
+   */
+  _maybeFinish(session) {
+    const done = session.external
+      ? session.afterprintSeen
+      : (session.afterprintSeen && session.printReturned);
+    if (done) this._endSession(session);
+  },
+
+  _bindPrintEvents() {
+    if (this._eventsBound) return;
+    this._eventsBound = true;
+
+    window.addEventListener('beforeprint', () => {
+      // Cada (re)renderizado de la vista previa pasa por aquí: reafirmamos título y modo.
+      if (!this._printSession) {
+        const meta = this.resolveMeta();
+        this._printSession = {
+          mode: 'teacher',
+          title: this.buildFileName({ coverTitle: meta.coverTitle, subjectName: meta.subjectName, type: 'Soluciones' }),
+          originalTitle: document.title,
+          printReturned: false,
+          afterprintSeen: false,
+          external: true,
+        };
+      }
+      this._applyPrintState(this._printSession);
+    });
+
+    window.addEventListener('afterprint', () => {
+      const s = this._printSession;
+      if (!s) return;
+      s.afterprintSeen = true;
+      this._maybeFinish(s);
+    });
+  },
+
+  /**
+   * Lanza el diálogo de impresión con el /Title correcto.
+   * @param {'teacher'|'student'} mode
+   * @param {Object} meta - { subjectName, coverTitle, ... }
    */
   triggerPrint(mode = 'teacher', meta = {}) {
-    const originalTitle = document.title;
+    this._bindPrintEvents();
+
+    const resolved = this.resolveMeta(meta);
     const isStudent = mode === 'student';
+    const title = this.buildFileName({
+      coverTitle: resolved.coverTitle,
+      subjectName: resolved.subjectName,
+      type: isStudent ? 'Enunciados' : 'Soluciones',
+    });
 
-    // 1. Alternar clase CSS para ocultar/mostrar soluciones
-    if (isStudent) {
-      document.body.classList.add('mode-student-print');
-    } else {
-      document.body.classList.remove('mode-student-print');
-    }
-
-    // 2. Determinar tipo y texto legible
-    const tipo = isStudent ? 'Enunciados' : 'Soluciones';
-    const cleanCoverTitle = (meta.coverTitle || '').trim();
-    const cleanSubject = (meta.subjectName || '').trim();
-    const cleanAcademy = (meta.academyName || '').trim();
-
-    // 3. Título del documento (metadato que leerá la pestaña del visor PDF)
-    // Formato: "Junio 2016 Matrices · Soluciones | Centro de Estudios"
-    const displayHeader = cleanCoverTitle || `${cleanSubject || 'Ejercicios'} (${tipo})`;
-    const subHeader = cleanCoverTitle ? ` · ${tipo}` : '';
-    const centerHeader = cleanAcademy ? ` | ${cleanAcademy}` : '';
-
-    // document.title define tanto el nombre sugerido al guardar como el título de la pestaña
-    document.title = `${this.buildFileName({
-      coverTitle: cleanCoverTitle,
-      type: tipo,
-      subjectName: cleanSubject,
-      academyCourse: meta.academyCourse,
-      academyName: cleanAcademy
-    })}`;
-
-    // 4. Limpieza al terminar o cancelar la impresión
-    const cleanup = () => {
-      document.body.classList.remove('mode-student-print');
-      document.title = originalTitle;
-      window.removeEventListener('afterprint', cleanup);
+    // Si quedaba una sesión anterior colgada, la sustituimos conservando el título original.
+    const originalTitle = this._printSession ? this._printSession.originalTitle : document.title;
+    const session = {
+      mode: isStudent ? 'student' : 'teacher',
+      title,
+      originalTitle,
+      printReturned: false,
+      afterprintSeen: false,
+      external: false,
     };
+    this._printSession = session;
+    this._applyPrintState(session);
 
-    window.addEventListener('afterprint', cleanup, { once: true });
+    // Damos tiempo a que el navegador propague el nuevo document.title (el proceso
+    // principal lo recibe por IPC, de forma asíncrona) y a que se aplique la clase CSS.
+    const settle = () => new Promise((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 250))));
 
-    try {
-      window.print();
-    } finally {
-      setTimeout(cleanup, 500);
-    }
+    settle().then(() => {
+      if (this._printSession !== session) return;
+      try {
+        this._applyPrintState(session);   // reafirmar justo antes de imprimir
+        window.print();                   // Chromium: bloquea hasta cerrar el diálogo
+      } catch (e) {
+        console.error('PdfExporter: error al imprimir', e);
+        this._endSession(session);
+        return;
+      }
+      session.printReturned = true;
+      this._maybeFinish(session);
+    });
   },
 
   // Mantener compatibilidad si se llama al nombre antiguo
@@ -234,7 +305,7 @@ const PdfExporter = {
       return;
     }
 
-    const filename = options.filename || `${this.buildFileName({ subjectName: options.subjectName, academyName: options.academyName })}.pdf`;
+    const filename = options.filename || `${this.buildFileName({ coverTitle: options.coverTitle, subjectName: options.subjectName, type: options.type || 'Soluciones' })}.pdf`;
 
     const config = {
       margin: 0,

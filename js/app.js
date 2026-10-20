@@ -555,29 +555,31 @@ if (newExerciseBtn) {
 }
 
 // Manejadores de Impresión Dual (Versión Alumno vs Versión Profesor)
+// Lectura ÚNICA y en el momento del clic de los datos del formulario.
+function getPrintMeta() {
+  return {
+    subjectName: subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '',
+    academyName: academyNameInput ? academyNameInput.value.trim() : '',
+    academyCourse: academyCourseInput ? academyCourseInput.value.trim() : '',
+    academyLogo: localStorage.getItem(APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo') || '',
+    coverTitle: coverTitleInput ? coverTitleInput.value.trim() : ''
+  };
+}
+
+// También cubre Ctrl+P / menú del navegador (evento beforeprint)
+PdfExporter.setMetaProvider(getPrintMeta);
+
 if (downloadStudentPdfBtn) {
   downloadStudentPdfBtn.addEventListener('click', (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
-    const academyName = academyNameInput ? academyNameInput.value.trim() : '';
-    const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
-    const academyLogo = localStorage.getItem(logoKey) || '';
-    const coverTitle = coverTitleInput ? coverTitleInput.value.trim() : '';
-    PdfExporter.triggerPrint('student', { subjectName, academyName, academyCourse, academyLogo, coverTitle });
+    PdfExporter.triggerPrint('student', getPrintMeta());
   });
 }
 
 if (downloadTeacherPdfBtn) {
   downloadTeacherPdfBtn.addEventListener('click', (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    const subjectName = subjectSelect ? subjectSelect.options[subjectSelect.selectedIndex].text : '';
-    const academyName = academyNameInput ? academyNameInput.value.trim() : '';
-    const academyCourse = academyCourseInput ? academyCourseInput.value.trim() : '';
-    const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
-    const academyLogo = localStorage.getItem(logoKey) || '';
-    const coverTitle = coverTitleInput ? coverTitleInput.value.trim() : '';
-    PdfExporter.triggerPrint('teacher', { subjectName, academyName, academyCourse, academyLogo, coverTitle });
+    PdfExporter.triggerPrint('teacher', getPrintMeta());
   });
 }
 
