@@ -45,6 +45,14 @@ const includeCoverCheckbox = document.getElementById('includeCover');
 
 const educationLevelSelect = document.getElementById('educationLevel');
 
+// Selectores de Modo de Herramienta (Resolver vs Crear Examen)
+const tabModeSolve = document.getElementById('tabModeSolve');
+const tabModeCreate = document.getElementById('tabModeCreate');
+const examConfigContainer = document.getElementById('examConfigContainer');
+const examQuestionsCount = document.getElementById('examQuestionsCount');
+const examTypeSelect = document.getElementById('examTypeSelect');
+const block3Title = document.getElementById('block3Title');
+
 const LEVEL_COURSE_SUGGESTIONS = {
   primaria: 'Educación Primaria',
   eso: 'Secundaria (ESO)',
@@ -58,6 +66,7 @@ const LEVEL_COURSE_SUGGESTIONS = {
 let uploadedFiles = [];          // [{ name, mimeType, base64, previewUrl }]
 let lastResolvedMarkdown = sessionStorage.getItem('myaulastudio_last_solution') || null;
 let currentAbortController = null;
+let currentToolMode = 'solve'; // 'solve' | 'create_exam'
 
 /**
  * Valida si el botón "Resolver" debe habilitarse según el contenido.
@@ -146,14 +155,23 @@ function updateFileListUI() {
   const count = uploadedFiles.length;
   const max = APP_CONFIG.MAX_FILES;
 
-  // Adaptación reactiva de la etiqueta y placeholder según haya fotos o no
+  // Adaptación reactiva de la etiqueta y placeholder según el modo y si hay adjuntos
   if (problemLabel && problemInput) {
-    if (count > 0) {
-      problemLabel.textContent = 'Instrucciones o aclaraciones sobre los archivos (opcional)';
-      problemInput.placeholder = 'Ej: «Resuelve solo el ejercicio 3b», «Usa el método de Gauss», o déjalo vacío para resolver todo...';
+    if (currentToolMode === 'create_exam') {
+      problemLabel.textContent = (count > 0)
+        ? 'Directrices o modificaciones sobre el material adjunto (opcional)'
+        : 'Tema, contenidos o directrices del examen a crear';
+      problemInput.placeholder = (count > 0)
+        ? 'Ej: «Crea un examen con la misma estructura y nivel que la foto, pero cambiando números y apartados...»'
+        : 'Ej: «Examen de 4 ejercicios de matrices y determinantes de 2º Bachillerato: inversa, discusión con parámetro k y ecuación matricial...»';
     } else {
-      problemLabel.textContent = 'Enunciado o transcripción';
-      problemInput.placeholder = 'Pega aquí el problema o transcribe el texto a resolver...';
+      if (count > 0) {
+        problemLabel.textContent = 'Instrucciones o aclaraciones sobre los archivos (opcional)';
+        problemInput.placeholder = 'Ej: «Resuelve solo el ejercicio 3b», «Usa el método de Gauss», o déjalo vacío para resolver todo...';
+      } else {
+        problemLabel.textContent = 'Enunciado o transcripción';
+        problemInput.placeholder = 'Pega aquí el problema o transcribe el texto a resolver...';
+      }
     }
   }
 
@@ -673,6 +691,39 @@ if (removeLogoBtn) {
   });
 }
 
+// Manejadores para alternar entre Modo Resolver y Modo Crear Examen
+function setToolMode(mode) {
+  currentToolMode = mode;
+
+  if (mode === 'create_exam') {
+    // Estilos de pestañas
+    tabModeCreate.className = 'py-2 px-3 rounded-lg bg-white text-indigo-700 font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5';
+    tabModeSolve.className = 'py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5';
+    
+    if (block3Title) block3Title.innerHTML = '<span>📝</span> 3. Crear Examen / Ficha';
+    if (examConfigContainer) examConfigContainer.classList.remove('hidden');
+    if (resolveBtn) resolveBtn.textContent = '✨ Generar Examen';
+  } else {
+    tabModeSolve.className = 'py-2 px-3 rounded-lg bg-white text-indigo-700 font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5';
+    tabModeCreate.className = 'py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5';
+    
+    if (block3Title) block3Title.innerHTML = '<span>✍️</span> 3. Resolver Ejercicio';
+    if (examConfigContainer) examConfigContainer.classList.add('hidden');
+    if (resolveBtn) resolveBtn.textContent = 'Resolver Ejercicio';
+  }
+
+  updateFileListUI();
+  updateResolveButtonState();
+}
+
+if (tabModeSolve) {
+  tabModeSolve.addEventListener('click', () => setToolMode('solve'));
+}
+
+if (tabModeCreate) {
+  tabModeCreate.addEventListener('click', () => setToolMode('create_exam'));
+}
+
 // --------------------------------------------------------------------------
 // 6. FLUJO PRINCIPAL: RESOLVER EJERCICIO
 // --------------------------------------------------------------------------
@@ -711,9 +762,11 @@ if (resolveBtn) {
 
     const loaderSubtext = APP_CONFIG.MOCK_MODE
       ? '🔧 Modo Simulación (Coste 0) activado...'
-      : engineMode === 'pro'
-        ? 'Razonando paso a paso con rigor analítico profundo...'
-        : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
+      : currentToolMode === 'create_exam'
+        ? 'Diseñando prueba pedagógica, baremo y solucionario...'
+        : engineMode === 'pro'
+          ? 'Razonando paso a paso con rigor analítico profundo...'
+          : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
 
     // 3. UI de carga con temporizador y BOTÓN DE CANCELAR
     solutionContainer.innerHTML = `
@@ -758,7 +811,16 @@ if (resolveBtn) {
 
     try {
       const level = educationLevelSelect ? educationLevelSelect.value : 'bachillerato';
-      const systemPrompt = getSystemPrompt(subject, level);
+      
+      // Selección dinámica de prompt según la herramienta activa
+      let systemPrompt;
+      if (currentToolMode === 'create_exam') {
+        const qCount = examQuestionsCount ? examQuestionsCount.value : 4;
+        const eType = examTypeSelect ? examTypeSelect.value : 'exam';
+        systemPrompt = getExamCreatorPrompt(subject, level, eType, qCount);
+      } else {
+        systemPrompt = getSystemPrompt(subject, level);
+      }
 
       // Petición a la API con la señal de cancelación
       const rawMarkdown = await ApiClient.resolveExercise({

@@ -161,3 +161,50 @@ function getSystemPrompt(subject, level = 'bachillerato') {
   
   return `${basePrompt}\n\nDIRECTRIZ DE NIVEL EDUCATIVO:\n${levelRule}`;
 }
+
+/**
+ * Genera el System Prompt docente para crear exámenes y fichas desde cero.
+ * Optimizado para máxima agilidad de cálculo y cero verborrea anti-524.
+ * @param {string} subject - Materia ('math', 'spanish', 'english').
+ * @param {string} level - Nivel ('primaria', 'eso', 'bachillerato', 'universidad').
+ * @param {string} examType - Tipo ('exam', 'ebau', 'worksheet', 'recovery').
+ * @param {number|string} count - Número de ejercicios (2 a 5).
+ * @returns {string} Prompt estructurado para Gemini.
+ */
+function getExamCreatorPrompt(subject, level = 'bachillerato', examType = 'exam', count = 4) {
+  const levelRule = LEVEL_INSTRUCTIONS[level] || LEVEL_INSTRUCTIONS.bachillerato;
+
+  const typeDescriptions = {
+    exam: 'Examen formal equilibrado con baremo de puntuación sobre 10 puntos.',
+    ebau: 'Modelo oficial de Examen EBAU / Selectividad con preguntas estándar de prueba de acceso.',
+    worksheet: 'Ficha práctica de trabajo y consolidación.',
+    recovery: 'Examen de recuperación centrado en destrezas nucleares.'
+  };
+
+  const typeDesc = typeDescriptions[examType] || typeDescriptions.exam;
+
+  return `Eres un Catedrático y Diseñador Pedagógico en ${subject.toUpperCase()} para el nivel: ${level.toUpperCase()}.
+Tu labor es CREAR DESDE CERO un ${typeDesc} con exactamente ${count} ejercicios originales y calibrados.
+
+DIRECTRICES DIDÁCTICAS Y DE RENDIMIENTO:
+- ${levelRule}
+- Si recibes fotos o directrices, úsalas como referencia temática pero genera enunciados INÉDITOS con datos nuevos.
+- AGILIDAD Y CONCISIÓN OBLIGATORIA: Sé directo, conciso y formal. PROHIBIDO incluir textos introductorios, prólogos, saludos o consejos generales de estudio que ralenticen la generación.
+- REGLAS DE FORMATO: Fórmulas en LaTeX estricto ($ y $$). Sin arte ASCII.
+
+ESTRUCTURA EXACTA DEL DOCUMENTO (RESPETA LOS ENCABEZADOS):
+PARTE 1 (EXAMEN / FICHA DEL ALUMNO):
+### Prueba de Evaluación: ${subject.toUpperCase()}
+(Indicación breve de tiempo y baremo general).
+
+Redacta directamente los ${count} ejercicios numerados y claros, indicando la puntuación de cada uno (ej: **Ejercicio 1 [2.5 puntos]**).
+
+<div class="page-break"></div>
+
+PARTE 2 (GUÍA DOCENTE Y SOLUCIONARIO COMPLETO):
+### Solucionario y Criterios de Calificación
+Para cada uno de los ${count} ejercicios, incluye de forma esquemática:
+1. **Desarrollo Paso a Paso:** Resolución matemática o analítica formal y directa.
+2. **Criterios de Puntuación:** Rúbrica concisa (ej: "Planteamiento: 1 p | Cálculo: 1 p | Resultado: 0.5 p").
+3. **Solución Final:** Destacada en negrita o bloque de cita.`;
+}

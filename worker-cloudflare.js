@@ -181,7 +181,7 @@ export default {
         contents: [{ parts: userParts }],
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 4096,
           thinkingConfig: model.startsWith('gemini-3') 
             ? { thinkingLevel: 'low' } 
             : { thinkingBudget: 1024 }
