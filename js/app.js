@@ -48,9 +48,13 @@ const educationLevelSelect = document.getElementById('educationLevel');
 // Selectores de Modo de Herramienta (Resolver vs Crear Examen)
 const tabModeSolve = document.getElementById('tabModeSolve');
 const tabModeCreate = document.getElementById('tabModeCreate');
+const tabModeCorrect = document.getElementById('tabModeCorrect');
 const examConfigContainer = document.getElementById('examConfigContainer');
+const correctConfigContainer = document.getElementById('correctConfigContainer');
 const examQuestionsCount = document.getElementById('examQuestionsCount');
 const examTypeSelect = document.getElementById('examTypeSelect');
+const correctionStrictness = document.getElementById('correctionStrictness');
+const correctionMaxScore = document.getElementById('correctionMaxScore');
 const block3Title = document.getElementById('block3Title');
 
 const LEVEL_COURSE_SUGGESTIONS = {
@@ -157,7 +161,14 @@ function updateFileListUI() {
 
   // Adaptación reactiva de la etiqueta y placeholder según el modo y si hay adjuntos
   if (problemLabel && problemInput) {
-    if (currentToolMode === 'create_exam') {
+    if (currentToolMode === 'correct') {
+      problemLabel.textContent = (count > 0)
+        ? 'Enunciado original o criterios adicionales de corrección (opcional)'
+        : 'Enunciado o transcripción de la tarea del alumno';
+      problemInput.placeholder = (count > 0)
+        ? 'Pega aquí el enunciado si la foto solo muestra el desarrollo del alumno, o déjalo vacío si ya se lee en la imagen...'
+        : 'Pega aquí el ejercicio y el desarrollo del alumno para analizarlo y corregirlo...';
+    } else if (currentToolMode === 'create_exam') {
       problemLabel.textContent = (count > 0)
         ? 'Directrices o modificaciones sobre el material adjunto (opcional)'
         : 'Tema, contenidos o directrices del examen a crear';
@@ -691,30 +702,41 @@ if (removeLogoBtn) {
   });
 }
 
-// Manejadores para alternar entre Modo Resolver y Modo Crear Examen
+// Manejador para alternar entre Modo Resolver, Crear Examen y Corregir
 function setToolMode(mode) {
   currentToolMode = mode;
 
-  if (mode === 'create_exam') {
-    // Estilos de pestañas
-    tabModeCreate.className = 'py-2 px-3 rounded-lg bg-white text-indigo-700 font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5';
-    tabModeSolve.className = 'py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5';
-    
+  const activeClass = 'py-2 px-2 sm:px-3 rounded-lg bg-white text-indigo-700 font-semibold shadow-xs transition-all flex items-center justify-center gap-1';
+  const inactiveClass = 'py-2 px-2 sm:px-3 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1';
+
+  // Reset de estilos de tabs
+  if (tabModeSolve) tabModeSolve.className = (mode === 'solve') ? activeClass : inactiveClass;
+  if (tabModeCreate) tabModeCreate.className = (mode === 'create_exam') ? activeClass : inactiveClass;
+  if (tabModeCorrect) tabModeCorrect.className = (mode === 'correct') ? activeClass : inactiveClass;
+
+  // Visibilidad de paneles auxiliares
+  if (examConfigContainer) examConfigContainer.classList.toggle('hidden', mode !== 'create_exam');
+  if (correctConfigContainer) correctConfigContainer.classList.toggle('hidden', mode !== 'correct');
+
+  // Textos adaptados
+  if (mode === 'correct') {
+    if (block3Title) block3Title.innerHTML = '<span>🔍</span> 3. Corregir Tarea / Examen';
+    if (resolveBtn) resolveBtn.textContent = '🔍 Corregir Ejercicio';
+  } else if (mode === 'create_exam') {
     if (block3Title) block3Title.innerHTML = '<span>📝</span> 3. Crear Examen / Ficha';
-    if (examConfigContainer) examConfigContainer.classList.remove('hidden');
     if (resolveBtn) resolveBtn.textContent = '✨ Generar Examen';
   } else {
-    tabModeSolve.className = 'py-2 px-3 rounded-lg bg-white text-indigo-700 font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5';
-    tabModeCreate.className = 'py-2 px-3 rounded-lg text-slate-600 hover:text-slate-900 transition-all flex items-center justify-center gap-1.5';
-    
     if (block3Title) block3Title.innerHTML = '<span>✍️</span> 3. Resolver Ejercicio';
-    if (examConfigContainer) examConfigContainer.classList.add('hidden');
     if (resolveBtn) resolveBtn.textContent = 'Resolver Ejercicio';
   }
 
   updateFileListUI();
   updateResolveButtonState();
 }
+
+if (tabModeSolve) tabModeSolve.addEventListener('click', () => setToolMode('solve'));
+if (tabModeCreate) tabModeCreate.addEventListener('click', () => setToolMode('create_exam'));
+if (tabModeCorrect) tabModeCorrect.addEventListener('click', () => setToolMode('correct')); // <-- NUEVO
 
 if (tabModeSolve) {
   tabModeSolve.addEventListener('click', () => setToolMode('solve'));
@@ -762,11 +784,13 @@ if (resolveBtn) {
 
     const loaderSubtext = APP_CONFIG.MOCK_MODE
       ? '🔧 Modo Simulación (Coste 0) activado...'
-      : currentToolMode === 'create_exam'
-        ? 'Diseñando prueba pedagógica, baremo y solucionario...'
-        : engineMode === 'pro'
-          ? 'Razonando paso a paso con rigor analítico profundo...'
-          : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
+      : currentToolMode === 'correct'
+        ? 'Analizando desarrollo manuscrito y evaluando paso a paso...'
+        : currentToolMode === 'create_exam'
+          ? 'Diseñando prueba pedagógica, baremo y solucionario...'
+          : engineMode === 'pro'
+            ? 'Razonando paso a paso con rigor analítico profundo...'
+            : 'Resolviendo ejercicio y maquetando gráficos paso a paso...';
 
     // 3. UI de carga con temporizador y BOTÓN DE CANCELAR
     solutionContainer.innerHTML = `
@@ -814,7 +838,11 @@ if (resolveBtn) {
       
       // Selección dinámica de prompt según la herramienta activa
       let systemPrompt;
-      if (currentToolMode === 'create_exam') {
+      if (currentToolMode === 'correct') {
+        const strictness = correctionStrictness ? correctionStrictness.value : 'standard';
+        const maxScore = correctionMaxScore ? correctionMaxScore.value : '10';
+        systemPrompt = getCorrectionPrompt(subject, level, strictness, maxScore);
+      } else if (currentToolMode === 'create_exam') {
         const qCount = examQuestionsCount ? examQuestionsCount.value : 4;
         const eType = examTypeSelect ? examTypeSelect.value : 'exam';
         systemPrompt = getExamCreatorPrompt(subject, level, eType, qCount);

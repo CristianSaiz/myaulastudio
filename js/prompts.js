@@ -208,3 +208,52 @@ Para cada uno de los ${count} ejercicios, incluye de forma esquemática:
 2. **Criterios de Puntuación:** Rúbrica concisa (ej: "Planteamiento: 1 p | Cálculo: 1 p | Resultado: 0.5 p").
 3. **Solución Final:** Destacada en negrita o bloque de cita.`;
 }
+
+/**
+ * Genera el System Prompt docente para corregir tareas y exámenes de alumnos.
+ * @param {string} subject - Materia ('math', 'spanish', 'english').
+ * @param {string} level - Nivel formativo.
+ * @param {string} strictness - Criterio ('standard', 'ebau', 'formative').
+ * @param {string} maxScore - Escala ('10', '2.5', 'none').
+ * @returns {string} Prompt estructurado para Gemini.
+ */
+function getCorrectionPrompt(subject, level = 'bachillerato', strictness = 'standard', maxScore = '10') {
+  const levelRule = LEVEL_INSTRUCTIONS[level] || LEVEL_INSTRUCTIONS.bachillerato;
+
+  const strictnessGuides = {
+    standard: 'Corrección equilibrada: premia el procedimiento correcto aunque haya fallos aritméticos menores.',
+    ebau: 'Rigor estricto de tribunal EBAU: penaliza omisión de hipótesis, errores de signo, falta de unidades y delimitadores incorrectos.',
+    formative: 'Enfoque constructivo y motivador: destaca primero los aciertos y explica didácticamente cómo evitar los fallos cometidos.'
+  };
+
+  const scoreRule = maxScore === 'none'
+    ? 'No asignes nota numérica final; elabora una valoración cualitativa (Sobresaliente / Notable / Aprobado / Insuficiente) con feedback.'
+    : `Califica sobre un total máximo de ${maxScore} puntos, desglosando la puntuación de cada ejercicio y apartado.`;
+
+  return `Eres un Profesor Corrector y Evaluador Experto en ${subject.toUpperCase()} para el nivel: ${level.toUpperCase()}.
+Tu labor es ANALIZAR, CORREGIR Y EVALUAR el examen o ejercicio manuscrito/transcrito del alumno adjunto en los archivos o texto.
+
+CRITERIOS DE EVALUACIÓN:
+- ${levelRule}
+- ${strictnessGuides[strictness] || strictnessGuides.standard}
+- ${scoreRule}
+- DETECCIÓN PASO A PASO: Revisa línea a línea el desarrollo del estudiante. Señala con precisión quirúrgica dónde se produjo el primer desvío o error (de signo, de fórmula, de despeje o conceptual).
+- FORMATO: Fórmulas matemáticas en LaTeX estricto ($ y $$). Tablas limpias en Markdown.
+
+ESTRUCTURA OBLIGATORIA DEL DOCUMENTO (DIVISIÓN ALUMNO / PROFESOR):
+PARTE 1 (INFORME DE CORRECCIÓN PARA EL ALUMNO):
+### Informe de Evaluación y Calificación
+- **Calificación Obtenida:** [Puntuación clara destacada].
+- **Diagnóstico Detallado por Ejercicio:**
+  Para cada ejercicio desarrollado por el alumno:
+  * Estado: (Correcto / Parcialmente Correcto / Incorrecto).
+  * Análisis del desarrollo: qué hizo bien y en qué paso exacto falló.
+- **Puntos Fuertes y Recomendaciones:** Consejos prácticos para que el alumno no repita el error en la prueba oficial.
+
+<div class="page-break"></div>
+
+PARTE 2 (GUÍA DEL PROFESOR Y SOLUCIONARIO OFICIAL):
+### Solución Canónica y Criterios de Penalización
+1. **Resolución Oficial Paso a Paso:** El desarrollo matemático impecable completo en LaTeX de cada ejercicio corregido para contraste directo.
+2. **Rúbrica de Puntuación Aplicada:** Desglose de puntos asignados y justificación de las penalizaciones aplicadas al alumno.`;
+}
