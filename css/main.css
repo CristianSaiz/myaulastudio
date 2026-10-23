@@ -57,18 +57,24 @@
   position: relative;
   overflow: hidden;
   width: 100%;
-  max-width: 100% !important;
-  min-height: 520px;
+  max-width: 100%;
   background-color: var(--night);
   color: #fbf5e8;
   padding: 36px 32px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  border-radius: 8px;
-  margin-bottom: 24px;
   -webkit-print-color-adjust: exact;
   print-color-adjust: exact;
+}
+
+/* Solo en pantalla aplicamos bordes redondeados y margen inferior */
+@media screen {
+  .portada {
+    min-height: 520px;
+    border-radius: 8px;
+    margin-bottom: 24px;
+  }
 }
 
 .portada::before {

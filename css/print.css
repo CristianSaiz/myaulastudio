@@ -14,7 +14,7 @@
    pegadas al borde del papel.) */
 @page {
   size: A4 portrait;
-  margin: 25mm 20mm;
+  margin: 0;
 }
 
 /* Portada: página con nombre y sangrado total. Al cambiar de nombre de
@@ -31,6 +31,7 @@
 html, body, *, *::before, *::after {
   -webkit-print-color-adjust: exact !important;
   print-color-adjust: exact !important;
+  color-adjust: exact !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -40,12 +41,12 @@ html, body, *, *::before, *::after {
    -------------------------------------------------------------------------- */
 html, body {
   display: block !important;
-  width: auto !important;
+  width: 100% !important;
   height: auto !important;
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  background: #fff !important;
+  background: #ffffff !important;
 }
 
 /* Interfaz de la app oculta.
@@ -59,6 +60,7 @@ main > section:last-child > div:first-child,
 #newExerciseBtn,
 #downloadStudentPdfBtn,
 #downloadTeacherPdfBtn,
+#licenseModal,
 button {
   display: none !important;
 }
@@ -74,7 +76,7 @@ main > section:last-child,
   min-height: 0 !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: 0 !important;
+  border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   background: transparent !important;
@@ -85,33 +87,36 @@ main > section:last-child,
    4. Portada · página 1 · full bleed
    -------------------------------------------------------------------------- */
 .portada {
-  page: cover;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  width: 100%;              /* = ancho real de la hoja, sin redondeos mm→px */
-  height: 296.8mm;          /* 0,2 mm menos que A4: Chromium redondea la hoja a px
-                               enteros y 297mm puede desbordar y crear una
-                               página en blanco */
-  min-height: 0;
-  margin: 0;
-  padding: 40mm 25mm 25mm;
-  border-radius: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  width: 210mm !important;
+  /* 296.5mm previene que un redondeo de subpíxel cree una hoja en blanco tras la portada */
+  height: 296.5mm !important;
+  min-height: 296.5mm !important;
+  max-height: 296.5mm !important;
+  margin: 0 !important;
+  padding: 40mm 25mm 25mm !important;
+  border-radius: 0 !important;
   background-color: #121e37 !important;
-  overflow: hidden;
-  break-after: page;
-  page-break-after: always;
-  break-inside: avoid;
-  page-break-inside: avoid;
+  color: #fbf5e8 !important;
+  overflow: hidden !important;
+  
+  /* Salto de página estricto tras la portada */
+  break-after: page !important;
+  page-break-after: always !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 
 .portada::before {
-  inset: 12mm;
-  border-color: rgba(220, 180, 120, 0.5);
+  inset: 12mm !important;
+  border: 1px solid rgba(220, 180, 120, 0.5) !important;
 }
 
 .portada h1.cover-title {
-  font-size: 42px;
+  font-size: 38px !important;
+  color: #fffaf0 !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -119,21 +124,23 @@ main > section:last-child,
    Los márgenes los pone @page; el contenedor no añade padding propio.
    -------------------------------------------------------------------------- */
 .contenido-documento {
-  margin: 0;
-  padding: 0;
-  border-radius: 0;
-  background: #fff;
+  box-sizing: border-box !important;
+  width: 210mm !important;
+  margin: 0 auto !important;
+  padding: 22mm 20mm 20mm !important; /* Márgenes estándar de lectura */
+  border-radius: 0 !important;
+  background: #ffffff !important;
 }
 
-/* Utilidad opcional para forzar salto manual entre ejercicios */
+/* Salto de página entre ejercicios o secciones */
 .page-break {
-  display: block;
-  height: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  break-before: page;
-  page-break-before: always;
+  display: block !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  break-before: page !important;
+  page-break-before: always !important;
 }
 
 /* --------------------------------------------------------------------------
@@ -148,18 +155,15 @@ table,
 figure,
 img,
 tr {
-  break-inside: avoid;
-  page-break-inside: avoid;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
 }
 
-/* Un título nunca debe quedar huérfano al final de página
-   (break-inside en un título no hace nada: es una sola línea) */
 #solutionContainer :is(h1, h2, h3, h4) {
-  break-after: avoid;
-  page-break-after: avoid;
+  break-after: avoid !important;
+  page-break-after: avoid !important;
 }
 
-/* Texto corrido: mínimo 3 líneas a cada lado de un corte */
 #solutionContainer :is(p, li) {
   orphans: 3;
   widows: 3;
@@ -185,10 +189,9 @@ thead {
   background-color: rgba(220, 180, 120, 0.2) !important;
   border-color: #dcb478 !important;
   color: #f4ddad !important;
-  font-weight: 600;
+  font-weight: 600 !important;
 }
 
-/* 2. PDF Alumno: ocultar soluciones y alternar etiquetas */
 body.mode-student-print .bloque-soluciones,
 body.mode-student-print .page-break-soluciones {
   display: none !important;
@@ -211,12 +214,10 @@ body.mode-student-print .portada .tag-alumno {
   color: #fffaf0 !important;
 }
 
-/* Suprimir barras de scroll en cualquier elemento durante la exportación a PDF */
+/* Ocultar barras de scroll */
 * {
-  scrollbar-width: none !important; /* Firefox */
-  -ms-overflow-style: none !important; /* IE/Edge */
+  scrollbar-width: none !important;
 }
-
 *::-webkit-scrollbar {
-  display: none !important; /* Chrome / Brave */
+  display: none !important;
 }
