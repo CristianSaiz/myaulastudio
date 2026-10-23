@@ -57,6 +57,13 @@ const correctionStrictness = document.getElementById('correctionStrictness');
 const correctionMaxScore = document.getElementById('correctionMaxScore');
 const block3Title = document.getElementById('block3Title');
 
+// Selectores de control de licencia y Modo Pro
+const proPlanBadge = document.getElementById('proPlanBadge');
+const proLockIcon = document.getElementById('proLockIcon');
+const proNoticeBox = document.getElementById('proNoticeBox');
+const engineProRadio = document.querySelector('input[name="engineMode"][value="pro"]');
+const engineFlashRadio = document.querySelector('input[name="engineMode"][value="flash"]');
+
 const LEVEL_COURSE_SUGGESTIONS = {
   primaria: 'Educación Primaria',
   eso: 'Secundaria (ESO)',
@@ -253,6 +260,86 @@ function updateFileListUI() {
   });
 
   updateResolveButtonState();
+}
+
+/**
+ * Actualiza el badge de licencia en la cabecera y adapta los controles de la UI.
+ */
+function updateLicenseBadge() {
+  const licenseBadge = document.getElementById('licenseBadge');
+  if (!licenseBadge) return;
+
+  const savedKey = localStorage.getItem(APP_CONFIG.STORAGE_LICENSE_KEY);
+
+  const engineProRadio = document.querySelector('input[name="engineMode"][value="pro"]');
+  const engineFlashRadio = document.querySelector('input[name="engineMode"][value="flash"]');
+  const engineProLabel = document.getElementById('engineProLabel');
+  const proPlanBadge = document.getElementById('proPlanBadge');
+  const proLockIcon = document.getElementById('proLockIcon');
+  const proNoticeBox = document.getElementById('proNoticeBox');
+
+  // Si no hay licencia o es DEMO, tratamos el modo Pro como bloqueado
+  const isDemo = !savedKey || savedKey.toUpperCase().includes('DEMO');
+
+  if (!savedKey) {
+    licenseBadge.classList.remove('hidden');
+    licenseBadge.className = 'text-[10px] bg-red-500/20 hover:bg-red-500/30 border border-red-400/40 px-2 py-1 rounded-md text-red-100 font-medium transition-colors';
+    licenseBadge.innerHTML = '⚠️ Sin Licencia';
+  } else if (isDemo) {
+    const maxUsage = APP_CONFIG.TRIAL_MAX_USAGE || 15;
+    const currentUsage = parseInt(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.trialUsageCount) || '0', 10);
+    const left = Math.max(0, maxUsage - currentUsage);
+
+    const badgeColor = left <= 3
+      ? 'bg-amber-500/30 hover:bg-amber-500/40 border-amber-400/50 text-amber-100'
+      : 'bg-white/10 hover:bg-white/20 border-white/20 text-white';
+
+    licenseBadge.classList.remove('hidden');
+    licenseBadge.className = `text-[10px] border px-2 py-1 rounded-md font-medium transition-colors ${badgeColor}`;
+    licenseBadge.innerHTML = `🛡️ Demo: ${left} de ${maxUsage} usos`;
+    licenseBadge.title = `Has consumido ${currentUsage} de tus ${maxUsage} resoluciones de prueba. Haz clic para gestionar tu licencia.`;
+  } else {
+    licenseBadge.classList.remove('hidden');
+    licenseBadge.className = 'text-[10px] bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 px-2 py-1 rounded-md text-emerald-100 font-medium transition-colors';
+    licenseBadge.innerHTML = '✨ Plan Centro';
+    licenseBadge.title = 'Licencia de centro docente activa e ilimitada.';
+  }
+
+  // --------------------------------------------------------------------------
+  // CANDADO ESTRICTO EN MODO PRO SEGÚN EL TIPO DE LICENCIA
+  // --------------------------------------------------------------------------
+  if (isDemo) {
+    // 1. Bloqueo físico del radio button
+    if (engineProRadio) {
+      engineProRadio.disabled = true;
+    }
+    // 2. Si estaba marcado Pro, forzar regreso a Flash
+    if (engineFlashRadio) {
+      engineFlashRadio.checked = true;
+    }
+    // 3. Estilo visual de deshabilitado y mensaje flotante (Tooltip)
+    if (engineProLabel) {
+      engineProLabel.classList.add('opacity-40', 'cursor-not-allowed');
+      engineProLabel.classList.remove('cursor-pointer');
+      engineProLabel.title = '🔒 Bloqueado: El Modo Profundo (Pro) está reservado para la suscripción Plan Centro. Tu prueba exprime el motor Flash al 100%.';
+    }
+    // 4. Mostrar distintivos de candado
+    if (proPlanBadge) proPlanBadge.classList.remove('hidden');
+    if (proLockIcon) proLockIcon.classList.remove('hidden');
+  } else {
+    // Es Licencia VIP / Centro: Desbloquear Pro al 100%
+    if (engineProRadio) {
+      engineProRadio.disabled = false;
+    }
+    if (engineProLabel) {
+      engineProLabel.classList.remove('opacity-40', 'cursor-not-allowed');
+      engineProLabel.classList.add('cursor-pointer');
+      engineProLabel.title = 'Razonamiento deductivo avanzado (~15-20 s) con Gemini 3.1 Pro para problemas de alta complejidad.';
+    }
+    if (proPlanBadge) proPlanBadge.classList.add('hidden');
+    if (proLockIcon) proLockIcon.classList.add('hidden');
+    if (proNoticeBox) proNoticeBox.classList.add('hidden');
+  }
 }
 
 // --------------------------------------------------------------------------
@@ -646,6 +733,7 @@ if (activateLicenseBtn) {
     }
 
     localStorage.setItem(APP_CONFIG.STORAGE_KEYS.licenseKey, key);
+    updateLicenseBadge();
     closeLicenseModal();
     checkLicenseStatus();
   });
@@ -713,6 +801,55 @@ function setToolMode(mode) {
   if (tabModeSolve) tabModeSolve.className = (mode === 'solve') ? activeClass : inactiveClass;
   if (tabModeCreate) tabModeCreate.className = (mode === 'create_exam') ? activeClass : inactiveClass;
   if (tabModeCorrect) tabModeCorrect.className = (mode === 'correct') ? activeClass : inactiveClass;
+
+  // Listener reactivo al cambiar entre Modo Rápido (Flash) y Modo Profundo (Pro)
+document.querySelectorAll('input[name="engineMode"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const savedKey = localStorage.getItem(APP_CONFIG.STORAGE_LICENSE_KEY) || '';
+    const isDemo = savedKey.toUpperCase().includes('DEMO');
+    const proNoticeBox = document.getElementById('proNoticeBox');
+    const modeHelperText = document.getElementById('modeHelperText');
+
+    if (e.target.value === 'pro') {
+      if (isDemo) {
+        if (proNoticeBox) proNoticeBox.classList.remove('hidden');
+        if (modeHelperText) {
+          modeHelperText.textContent = 'Procesamiento profundo con Gemini 3.1 Pro (Función exclusiva de suscripción de Centro).';
+        }
+      } else {
+        if (proNoticeBox) proNoticeBox.classList.add('hidden');
+        if (modeHelperText) {
+          modeHelperText.textContent = 'Razonamiento deductivo avanzado (~15-20 s) para demostraciones complejas.';
+        }
+      }
+    } else {
+      if (proNoticeBox) proNoticeBox.classList.add('hidden');
+      if (modeHelperText) {
+        modeHelperText.textContent = 'Resolución instantánea (~3 s). Motor activo al 100% de potencia para tu prueba.';
+      }
+    }
+  });
+});
+
+// Si un usuario Demo intenta hacer clic en el Modo Pro bloqueado
+const engineProLabel = document.getElementById('engineProLabel');
+if (engineProLabel) {
+  engineProLabel.addEventListener('click', (e) => {
+    const savedKey = localStorage.getItem(APP_CONFIG.STORAGE_LICENSE_KEY) || '';
+    const isDemo = !savedKey || savedKey.toUpperCase().includes('DEMO');
+
+    if (isDemo) {
+      e.preventDefault();
+      const flashRadio = document.querySelector('input[name="engineMode"][value="flash"]');
+      if (flashRadio) flashRadio.checked = true;
+
+      const proNoticeBox = document.getElementById('proNoticeBox');
+      if (proNoticeBox) {
+        proNoticeBox.classList.remove('hidden');
+      }
+    }
+  });
+}
 
   // Visibilidad de paneles auxiliares
   if (examConfigContainer) examConfigContainer.classList.toggle('hidden', mode !== 'create_exam');
@@ -923,6 +1060,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateResolveButtonState();
   checkLicenseStatus();
   setupContactLinks();
+  updateLicenseBadge();
 });
 
 /**

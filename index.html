@@ -140,22 +140,31 @@
 
         <!-- Selector de Motor / Modo de Análisis -->
         <div>
-          <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
-            Modo de Resolución
-          </label>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Modo de Resolución
+            </label>
+            <span id="proPlanBadge" class="hidden text-[10px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-medium">
+              Plan Centro
+            </span>
+          </div>
           <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-lg border border-slate-200">
-            <label class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600">
+            <label id="engineFlashLabel" class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600">
               <input type="radio" name="engineMode" value="flash" class="sr-only" checked>
               <span>⚡ Rápido (Flash)</span>
             </label>
-            <label class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600">
+            <label id="engineProLabel" class="flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md cursor-pointer text-xs font-medium transition-all has-[:checked]:bg-white has-[:checked]:text-indigo-700 has-[:checked]:shadow-xs text-slate-600 relative">
               <input type="radio" name="engineMode" value="pro" class="sr-only">
               <span>🧠 Profundo (Pro)</span>
+              <span id="proLockIcon" class="hidden text-[11px] text-slate-400">🔒</span>
             </label>
           </div>
           <p id="modeHelperText" class="text-[11px] text-slate-400 mt-1 leading-tight">
-            Resolución instantánea (~3 s). Ideal para ESO, Bachillerato y Selectividad.
+            Resolución instantánea (~3 s). Motor activo al 100% de potencia para tu prueba.
           </p>
+          <div id="proNoticeBox" class="hidden mt-2 p-2 bg-amber-50/80 border border-amber-200 rounded-lg text-[11px] text-amber-800 leading-tight">
+            ℹ️ <strong>Modo Profundo (Pro)</strong> está optimizado para demostraciones teóricas complejas y reservado para suscripciones de Centro/Colegio. Tu clave de prueba utiliza el motor <strong>Flash</strong> de máxima velocidad.
+          </div>
         </div>
       </div>
 
