@@ -893,6 +893,24 @@ if (resolveBtn) {
 
     if (!checkLicenseStatus(true)) return;
 
+    // ------------------------------------------------------------------------
+    // Control preventivo de conectividad Offline
+    // ------------------------------------------------------------------------
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      solutionContainer.innerHTML = `
+        <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm flex items-start gap-3">
+          <span class="text-xl">📡</span>
+          <div>
+            <strong>Sin conexión a Internet:</strong>
+            <p class="mt-1 text-xs text-amber-700 leading-relaxed">
+              No se detecta conexión activa en este equipo. Por favor, comprueba tu Wi-Fi o datos para poder procesar el ejercicio con la IA.
+            </p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     const subject = subjectSelect ? subjectSelect.value : 'math';
     const problem = problemInput ? problemInput.value.trim() : '';
     const engineMode = document.querySelector('input[name="engineMode"]:checked')?.value || 'flash';
@@ -1032,16 +1050,73 @@ if (resolveBtn) {
       }
 
       console.error('Error al resolver ejercicio:', error);
+      const errorText = error.message || '';
       const safeErrorMsg = (typeof PdfExporter !== 'undefined' && PdfExporter.escapeHtml)
-        ? PdfExporter.escapeHtml(error.message || 'Error desconocido.')
-        : (error.message || 'Error desconocido.');
+        ? PdfExporter.escapeHtml(errorText)
+        : errorText;
 
-      solutionContainer.innerHTML = `
-        <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-          <strong>Error al generar la resolución:</strong>
-          <p class="mt-1">${safeErrorMsg}</p>
-        </div>
-      `;
+      // Detección de sobrecarga / saturación HTTP 503 de Google Gemini
+      const isOverloaded = errorText.toLowerCase().includes('saturados') || 
+                           errorText.includes('503') || 
+                           errorText.toLowerCase().includes('overloaded');
+
+      if (isOverloaded) {
+        let retrySeconds = 5;
+        solutionContainer.innerHTML = `
+          <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm space-y-2">
+            <div class="flex items-center gap-2">
+              <span class="text-lg">⏳</span>
+              <strong>Servidores de Google momentáneamente saturados:</strong>
+            </div>
+            <p class="text-xs text-amber-700 leading-relaxed">
+              Hay un pico de tráfico en la infraestructura gratuita de Google. En unos segundos se liberará el canal de procesamiento.
+            </p>
+            <div class="pt-1 flex items-center justify-between">
+              <span id="retryCountdownText" class="text-xs font-mono font-bold text-amber-900 bg-amber-100/80 px-2.5 py-1 rounded-md">
+                Reintento disponible en: ${retrySeconds} s
+              </span>
+              <button 
+                id="instantRetryBtn" 
+                type="button" 
+                disabled 
+                class="text-xs font-medium px-3 py-1 bg-amber-200/60 text-amber-700 rounded-lg cursor-not-allowed transition-all">
+                Reintentar ahora
+              </button>
+            </div>
+          </div>
+        `;
+
+        const countdownInterval = setInterval(() => {
+          retrySeconds--;
+          const countdownEl = document.getElementById('retryCountdownText');
+          const retryBtnEl = document.getElementById('instantRetryBtn');
+
+          if (countdownEl && retrySeconds > 0) {
+            countdownEl.textContent = `Reintento disponible en: ${retrySeconds} s`;
+          } else if (countdownEl && retrySeconds <= 0) {
+            clearInterval(countdownInterval);
+            countdownEl.textContent = '✅ Canal despejado';
+            countdownEl.className = 'text-xs font-mono font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md';
+
+            if (retryBtnEl) {
+              retryBtnEl.disabled = false;
+              retryBtnEl.className = 'text-xs font-bold px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-xs cursor-pointer transition-all animate-pulse';
+              retryBtnEl.addEventListener('click', () => {
+                if (resolveBtn) resolveBtn.click();
+              }, { once: true });
+            }
+          }
+        }, 1000);
+
+      } else {
+        // Error estándar no relacionado con sobrecarga
+        solutionContainer.innerHTML = `
+          <div class="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+            <strong>Error al generar la resolución:</strong>
+            <p class="mt-1">${safeErrorMsg}</p>
+          </div>
+        `;
+      }
     } finally {
       clearInterval(intervalTimer);
       currentAbortController = null;
