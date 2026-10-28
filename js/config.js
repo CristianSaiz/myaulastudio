@@ -22,6 +22,9 @@ const APP_CONFIG = {
   // Límite máximo de resoluciones para claves demo/prueba
   TRIAL_MAX_USAGE: 15,
 
+  // Versión del esquema de persistencia local (para migraciones automáticas)
+  STORAGE_SCHEMA_VERSION: 1,
+
   // Orígenes autorizados (CORS)
   ALLOWED_ORIGIN: [
     'https://myaulastudio.vercel.app',
@@ -55,6 +58,7 @@ const APP_CONFIG = {
 
   // Claves fijas utilizadas en localStorage
   STORAGE_KEYS: {
+    schemaVersion: 'myaulastudio_schema_version',
     licenseKey: 'edtech_license_key',
     trialUsageCount: 'edtech_trial_usage',
     apiKeyPrefix: 'myaulastudio_key_',

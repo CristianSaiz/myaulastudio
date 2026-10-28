@@ -345,6 +345,32 @@ function updateLicenseBadge() {
 // --------------------------------------------------------------------------
 // 3. PERSISTENCIA EN LOCALSTORAGE Y MODAL DE LICENCIA
 // --------------------------------------------------------------------------
+/**
+ * Capa de inicialización y control de versiones de almacenamiento local.
+ * Garantiza retrocompatibilidad y saneado preventivo ante cambios de esquema.
+ */
+function initStorageMigration() {
+  try {
+    const currentVersionStr = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.schemaVersion);
+    const currentVersion = currentVersionStr ? parseInt(currentVersionStr, 10) : 0;
+    const targetVersion = APP_CONFIG.STORAGE_SCHEMA_VERSION || 1;
+
+    if (currentVersion < targetVersion) {
+      console.info(`[Storage] Migrando esquema local de v${currentVersion} a v${targetVersion}...`);
+
+      if (currentVersion === 0) {
+        localStorage.removeItem('edtech_trial_start');
+        localStorage.removeItem('myaulastudio_last_solution_local');
+      }
+
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.schemaVersion, targetVersion.toString());
+      console.info(`[Storage] Esquema local actualizado a v${targetVersion} con éxito.`);
+    }
+  } catch (err) {
+    console.warn('[Storage] No se pudo verificar o migrar la versión de almacenamiento:', err);
+  }
+}
+
 function loadSavedPreferences() {
   if (academyNameInput) academyNameInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academyName) || '';
   if (academySloganInput) academySloganInput.value = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.academySlogan) || '';
@@ -772,7 +798,26 @@ if (academyLogoInput) {
     reader.onload = (event) => {
       const base64 = event.target.result;
       const logoKey = APP_CONFIG.STORAGE_KEYS?.academyLogo || 'edtech_academy_logo';
-      localStorage.setItem(logoKey, base64);
+      // TAREA 2.2: Guardado defensivo contra desbordamiento de cuota (5 MB)
+      try {
+        localStorage.setItem(logoKey, base64);
+      } catch (storageError) {
+        const isQuotaExceeded = 
+          storageError.name === 'QuotaExceededError' || 
+          storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED' || 
+          storageError.code === 22;
+
+        if (isQuotaExceeded) {
+          console.warn('[Storage] La imagen del logo supera la cuota disponible de localStorage.');
+          alert(
+            '⚠️ Aviso sobre el Logotipo:\n\n' +
+            'La imagen seleccionada supera el límite de memoria del navegador (5 MB).\n\n' +
+            'Se mostrará e imprimirá durante esta sesión, pero no quedará guardada al cerrar el navegador. Para conservarla permanentemente, te recomendamos usar un archivo más ligero o SVG.'
+          );
+        } else {
+          console.error('[Storage] Error al persistir el logotipo:', storageError);
+        }
+      }
       updateLogoUI(base64);
       renderCurrentView();
     };
@@ -1130,6 +1175,7 @@ if (resolveBtn) {
 // 7. INICIALIZACIÓN
 // --------------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
+  initStorageMigration();
   loadSavedPreferences();
   renderCurrentView();
   updateResolveButtonState();
