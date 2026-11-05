@@ -11,7 +11,7 @@ const APP_CONFIG = {
   MOCK_MODE: false,
 
   // Endpoint de tu proxy seguro en Cloudflare Workers
-  WORKER_URL: 'https://resolutor-edtech-api.c-saiz-montes.workers.dev',
+  WORKER_URL: 'https://myaulastudio-api.c-saiz-montes.workers.dev',
 
   // Retardo simulado en milisegundos cuando MOCK_MODE está activo
   MOCK_DELAY_MS: 600,
